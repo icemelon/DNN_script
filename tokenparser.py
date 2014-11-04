@@ -1,10 +1,10 @@
-SEPERATOR = " {;"
+SEPARATOR = " {;"
 
 class TokenParser(object):
-	def pop(self, seperators=SEPERATOR):
+	def pop(self, separators=SEPARATOR):
 		pass
 
-	def peek(self, seperators=SEPERATOR):
+	def peek(self, separators=SEPARATOR):
 		pass
 
 	def startswith(self, prefix):
@@ -15,9 +15,9 @@ class StringTokenParser(TokenParser):
 		self._content = string[:].strip()
 		self.end = False
 		self._token = None # current token
-		self._sep = None # current seperator
+		self._sep = None # current separator
 
-	def _parse(self, seperators):
+	def _parse(self, separators):
 		if self.end: return
 
 		if len(self._content) == 0:
@@ -57,7 +57,7 @@ class StringTokenParser(TokenParser):
 			
 		index = -1
 		sep = None
-		for c in seperators:
+		for c in separators:
 			# print c
 			i = self._content.find(c)
 			# corner case: a={}
@@ -74,21 +74,24 @@ class StringTokenParser(TokenParser):
 			sep = "<EOF>"
 
 		token += self._content[:index]
-		self._token = token
+		self._token = token.strip()
 		self._sep = sep
-		self._content = self._content[index+1:].strip()
+		if sep == '{':
+			self._content = self._content[index:].strip()
+		else:
+			self._content = self._content[index+1:].strip()
 
-	def pop(self, seperators=SEPERATOR):
+	def pop(self, separators=SEPARATOR):
 		if self._token is None:
-			self._parse(seperators)
+			self._parse(separators)
 		token = self._token
 		self._token = None
 		return token
 
 	# get next token, but didn't pop up it
-	def peek(self, seperators=SEPERATOR):
+	def peek(self, separators=SEPARATOR):
 		if self._token is None:
-			self._parse(seperators)
+			self._parse(separators)
 		return self._token
 
 	def startswith(self, prefix):
@@ -116,7 +119,7 @@ class FileTokenParser(TokenParser):
 		self._content += " " + line.strip()
 		self._content = self._content.strip()
 
-	def _parse(self, seperators):
+	def _parse(self, separators):
 		if self.end: return
 
 		if len(self._content) == 0:
@@ -160,7 +163,7 @@ class FileTokenParser(TokenParser):
 			
 		index = -1
 		sep = None
-		for c in seperators:
+		for c in separators:
 			# print c
 			i = self._content.find(c)
 			# corner case: a={}
@@ -177,25 +180,28 @@ class FileTokenParser(TokenParser):
 			sep = "<EOF>"
 
 		token += self._content[:index]
-		self._token = token
+		self._token = token.strip()
 		self._sep = sep
-		self._content = self._content[index+1:].strip()
+		if sep == '{':
+			self._content = self._content[index:].strip()
+		else:
+			self._content = self._content[index+1:].strip()
 
-	def pop(self, seperators=SEPERATOR):
+	def pop(self, separators=SEPARATOR):
 		while not self.fileEnds and len(self._content) == 0:
 			self.readline()
 		if self._token is None:
-			self._parse(seperators)
+			self._parse(separators)
 		token = self._token
 		self._token = None
 		return token
 
 	# get next token, but didn't pop up it
-	def peek(self, seperators=SEPERATOR):
+	def peek(self, separators=SEPARATOR):
 		while not self.fileEnds and len(self._content) == 0:
 			self.readline()
 		if self._token is None:
-			self._parse(seperators)
+			self._parse(separators)
 		return self._token
 
 	def startswith(self, prefix):

@@ -39,7 +39,7 @@ class Layer(object):
 		if token[0] == '{':
 			tokens = StringTokenParser(token.strip('{}'))
 			while not tokens.startswith("from"):
-				desc = tokens.pop(seperators=";")
+				desc = tokens.pop(separators=";")
 				key, val = desc.split('=')
 				attrs[key.strip()] = Const.parseValueOrArray(val)
 			tokens.pop() # skip "from"

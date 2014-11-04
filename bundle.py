@@ -8,9 +8,7 @@ class Bundle(object):
 
 	@staticmethod
 	def parse(inputLayer, tokens):
-		bundleType = tokens.pop()
-		if bundleType == "max" or bundleType == "response":
-			bundleType += " %s" % tokens.pop()
+		bundleType = tokens.pop(separators='{;')
 		attrs = {}
 		# check if there are more attributes
 		if tokens._sep != ';':
@@ -50,8 +48,7 @@ class ConvolveBundle(Bundle):
 		super(ConvolveBundle, self).__init__(inputLayer)
 		self.geo = ConvolveGeometry(attrs)
 		self.mapCount = attrs['MapCount']
-		self.sharing = attrs['Sharing'] if 'Sharing' in attrs \
-			else [False] * self.geo.dim
+		self.sharing = attrs['Sharing'] if 'Sharing' in attrs else None
 		self.weights = attrs['Weights'] if 'Weights' in attrs else None
 
 	def computeDimOutput(self):
@@ -63,7 +60,8 @@ class ConvolveBundle(Bundle):
 		s = '  from %s convolve {\n' % self.input.name
 		pad = ' '*4
 		s += '%s\n' % self.geo.__str__(pad)
-		s += pad + 'Sharing = %s;\n' % Const.tostr(self.sharing)
+		if self.sharing is not None:
+			s += pad + 'Sharing = %s;\n' % Const.tostr(self.sharing)
 		s += pad + 'MapCount = %s;\n' % Const.tostr(self.mapCount)
 		if self.weights is not None:
 			s += pad + 'Weights = %s;\n' % Const.tostr(self.weights)
@@ -113,14 +111,8 @@ class ConvolveGeometry(object):
 		self.dimInput = attrs['InputShape']
 		self.dimKernel = attrs['KernelShape']
 		self.dim = len(self.dimKernel)
-		if 'Stride' in attrs:
-			self.stride = attrs['Stride']
-		else:
-			self.stride = [1] * self.dim
-		if 'Padding' in attrs:
-			self.padding = attrs['Padding']
-		else:
-			self.padding = [False] * self.dim
+		self.stride = attrs['Stride'] if 'Stride' in attrs else None
+		self.padding = attrs['Padding'] if 'Padding' in attrs else None
 
 	@property
 	def dimOutput(self):
@@ -131,12 +123,19 @@ class ConvolveGeometry(object):
 				nInput += self.dimKernel[i] - 1
 			nOutput = (nInput - self.dimKernel[i]) / self.stride[i] + 1
 			dimOutput.append(nOutput)
-		# print dimOutput
 		return dimOutput
 
 	def __str__(self, pad=''):
-		s = pad + 'InputShape = %s;\n' % Const.tostr(self.dimInput)
-		s += pad + 'KernelShape = %s;\n' % Const.tostr(self.dimKernel)
-		s += pad + 'Stride = %s;\n' % Const.tostr(self.stride)
-		s += pad + 'Padding = %s;' % Const.tostr(self.padding)
+		items = []
+		items.append('InputShape = %s;' % Const.tostr(self.dimInput))
+		items.append('KernelShape = %s;' % Const.tostr(self.dimKernel))
+
+		# s = pad + 'InputShape = %s;\n' % Const.tostr(self.dimInput)
+		# s += pad + 'KernelShape = %s;\n' % Const.tostr(self.dimKernel)
+		if self.stride is not None:
+			items.append('Stride = %s;' % Const.tostr(self.stride))
+		if self.padding is not None:
+			items.append('Padding = %s;' % Const.tostr(self.padding))
+		sep = "\n" + pad
+		s = pad + sep.join(items)
 		return s

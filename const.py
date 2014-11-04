@@ -14,7 +14,7 @@ class Const(object):
 				key, val = item.split('=')
 				Const.values[key.strip()] = Const.parseValueOrArray(val)
 		else:
-			item = tokens.pop(sep=";")
+			item = tokens.pop(separators=";")
 			key, val = item.split('=')
 			Const.values[key.strip()] = Const.parseValueOrArray(val)
 

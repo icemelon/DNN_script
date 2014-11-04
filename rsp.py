@@ -1,4 +1,4 @@
-from tokenparser import TokenParser
+from tokenparser import StringTokenParser
 
 def removeItem(arr, filter):
 	item = None
@@ -23,7 +23,7 @@ class RspDescription(object):
 
 	def parseClassifier(self, description):
 		detail = {}
-		tokens = TokenParser(description.strip('{}'))
+		tokens = StringTokenParser(description.strip('{}'))
 
 		while True:
 			token = tokens.pop()
@@ -45,7 +45,7 @@ class RspDescription(object):
 	def parse(self, rspFile):
 		with open(rspFile) as f:
 			for line in f:
-				tokens = TokenParser(line)
+				tokens = StringTokenParser(line)
 				if tokens.pop() == '/cl':
 					self.classifier['name'] = tokens.pop()
 					self.classifier['detail'] = self.parseClassifier(tokens.pop())
