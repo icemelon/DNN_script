@@ -61,6 +61,20 @@ class NeuralNetwork(object):
 				
 		return True
 
+	def removeLayers(self, num):
+		for _ in range(num):
+			layer = self.layers.pop()
+			bundle = layer.bundle
+			if layer.biases is not None:
+				Const.remove(layer.biases)
+			if 'weights' in dir(bundle) and bundle.weights is not None:
+				Const.remove(bundle.weights)
+		# change last layer into output layer
+		layer = self.layers.pop()
+		attrs = {"Biases": layer.biases}
+		newLayer = OutputLayer(layer.name, layer.dimOutput, layer.outputFunc, layer.bundle, attrs)
+		self.layers.append(newLayer)
+
 	def update(self, layerName, mod):
 		layer = None
 		for i in range(len(self.layers)):

@@ -22,6 +22,7 @@ if __name__ == '__main__':
 	argparser = argparse.ArgumentParser(description='Parse/Convert TLC NN file')
 	argparser.add_argument('input', type=file, help='input file name (.nn)')
 	# argparser.add_argument('-v', '--verify', action='store_true', dest='verify', help='Verify NN definition')
+	argparser.add_argument('-rm', '--remove', type=int, default=0, help='Remove last N layers')
 	argparser.add_argument('-m', '--modify', help='Modification description file')
 	argparser.add_argument('-o', '--output', type=argparse.FileType('w'), default=sys.stdout, help='output file name (.nn)')
 	try:
@@ -69,6 +70,9 @@ if __name__ == '__main__':
 			nn.update(layerName, mod)
 		# if not nn.verify():
 		# 	exit()
+
+	if args.remove > 0:
+		nn.removeLayers(args.remove)
 
 	begin = time.time()
 	log("Starts to output neural network")

@@ -52,6 +52,13 @@ class Const(object):
 			return Const.parseValue(s)
 
 	@staticmethod
+	def remove(var):
+		if var in Const.values:
+			del Const.values[var]
+			return True
+		return False
+
+	@staticmethod
 	def tostr(val):
 		if type(val) is bool:
 			return 'true' if val else 'false'
