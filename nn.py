@@ -1,8 +1,9 @@
+import time
 import operator
 
-from tokenparser import TokenParser
 from const import Const
 from layer import *
+from tokenparser import FileTokenParser
 
 OPS = {
 	"+": operator.add,
@@ -99,22 +100,20 @@ class NeuralNetwork(object):
 					layer.geo.dimKernel[0] = layer.geo.dimInput[0]
 
 	@staticmethod
-	def parseNN(filename):
-		lines = []
-		with open(filename) as f:
-			for line in f.readlines():
-				if '//' in line:
-					line = line[:line.index('//')]
-				lines.append(line.strip())
-		tokens = TokenParser(' '.join(lines))
+	def parseNN(fin):
+		tokens = FileTokenParser(fin)
 
 		nn = NeuralNetwork()
-		while not tokens.end:
+		while True:
 			token = tokens.peek()
-			if token == 'const':
+			if token == None:
+				break
+			elif token == 'const':
 				Const.parse(tokens)
 			else:
 				layer = Layer.parse(tokens, nn)
 				nn.layers.append(layer)
-		
+				if type(layer) is OutputLayer:
+					# only parse to output layer
+					break
 		return nn

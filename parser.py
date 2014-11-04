@@ -1,6 +1,7 @@
 import os
 import re
 import sys
+import time
 import argparse
 
 from nn import NeuralNetwork
@@ -13,18 +14,26 @@ def isnum(expr):
 	else:
 		return False
 
+def log(msg):
+	timestr = time.strftime("%m/%d/%Y %H:%M:%S", time.localtime())
+	print "%s %s" % (timestr, msg)
+
 if __name__ == '__main__':
 	argparser = argparse.ArgumentParser(description='Parse/Convert TLC NN file')
-	argparser.add_argument('input', help='input file name (.nn)')
+	argparser.add_argument('input', type=file, help='input file name (.nn)')
 	# argparser.add_argument('-v', '--verify', action='store_true', dest='verify', help='Verify NN definition')
 	argparser.add_argument('-m', '--modify', help='Modification description file')
-	argparser.add_argument('-o', '--output', help='output file name (.nn)')
+	argparser.add_argument('-o', '--output', type=argparse.FileType('w'), default=sys.stdout, help='output file name (.nn)')
 	try:
 		args = argparser.parse_args()
 	except:
 		exit()
-	
+
+	begin = time.time()
+	log("Starts to parse neural network")
 	nn = NeuralNetwork.parseNN(args.input)
+	end = time.time()
+	log("Parsing finishes (%.1f s)" % (end-begin))
 	# if args.verify:
 	# 	if nn.verify():
 	# 		print '%s is legal' % args.input
@@ -61,10 +70,11 @@ if __name__ == '__main__':
 		# if not nn.verify():
 		# 	exit()
 
-	if args.output is None:
-		print nn
-		Const.output(sys.stdout)
-	else:
-		with open(args.output, 'w') as out:
-			out.write(str(nn))
-			Const.output(out)
+	begin = time.time()
+	log("Starts to output neural network")
+	
+	args.output.write("%s\n" % str(nn))
+	Const.output(args.output, args.input)
+
+	end = time.time()
+	log("Output finishes (%.1f s)" % (end-begin))

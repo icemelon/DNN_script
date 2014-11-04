@@ -39,8 +39,6 @@ class Const(object):
 			# let's put dangling const first
 			Const.values[s] = None
 			return s
-		# err = 'Value "%s" cannot be parsed' % s
-		#raise Exception(err)
 
 	@staticmethod
 	def parseValueOrArray(s):
@@ -62,9 +60,35 @@ class Const(object):
 		else:
 			return str(val)
 
+	# fin for the rest of input file
 	@staticmethod
-	def output(out):
+	def output(fout, fin=None):
 		for key in Const.values:
 			val = Const.values[key]
 			if type(val) is list:
-				out.write("const %s = %s;\n" % (key, val))
+				fout.write("const %s = %s;\n" % (key, val))
+
+		if fin is not None:
+			while True:
+				line = fin.readline()
+				if not line: break
+				line = line.strip('\n')
+				if len(line) == 0: continue
+				if not line.startswith("const"): continue
+
+				var = line.split()[1]
+				# check if this const is required
+				if var in Const.values:
+					fout.write("\n%s\n" % line)
+					end = False
+					while not end:
+						line = fin.readline().strip('\n')
+						fout.write("%s\n" % line)
+						if line.endswith(";"): end = True
+				else:
+					# skip this const
+					end = False
+					while not end:
+						line = fin.readline().strip('\n')
+						if line.endswith(";"): end = True
+
