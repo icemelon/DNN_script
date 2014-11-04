@@ -127,6 +127,7 @@ class NeuralNetwork(object):
 			else:
 				layer = Layer.parse(tokens, nn)
 				nn.layers.append(layer)
+				# print layer
 				if type(layer) is OutputLayer:
 					# only parse to output layer
 					break

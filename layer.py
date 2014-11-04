@@ -1,4 +1,4 @@
-from tokenparser import TokenParser
+from tokenparser import *
 from const import Const
 from bundle import *
 
@@ -37,9 +37,9 @@ class Layer(object):
 
 		attrs = {}
 		if token[0] == '{':
-			tokens = TokenParser(token.strip('{}'))
-			while not tokens.content.startswith("from"):
-				desc = tokens.pop(sep=";")
+			tokens = StringTokenParser(token.strip('{}'))
+			while not tokens.startswith("from"):
+				desc = tokens.pop(seperators=";")
 				key, val = desc.split('=')
 				attrs[key.strip()] = Const.parseValueOrArray(val)
 			tokens.pop() # skip "from"

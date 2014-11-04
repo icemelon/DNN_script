@@ -6,7 +6,7 @@ class Const(object):
 	@staticmethod
 	def parse(tokens):
 		tokens.pop() # skip "const"
-		if tokens.content.startswith('{'):
+		if tokens.startswith('{'):
 			desc = tokens.pop().strip('{}')
 			for item in desc.split(';'):
 				item = item.strip()

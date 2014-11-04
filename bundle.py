@@ -12,8 +12,8 @@ class Bundle(object):
 		if bundleType == "max" or bundleType == "response":
 			bundleType += " %s" % tokens.pop()
 		attrs = {}
-		# NOTE: startswith could handle empty string case
-		if tokens.content.startswith('{'):
+		# check if there are more attributes
+		if tokens._sep != ';':
 			detail = tokens.pop().strip('{}')
 			for item in detail.split(';'):
 				item = item.strip()
@@ -66,7 +66,7 @@ class ConvolveBundle(Bundle):
 		s += pad + 'Sharing = %s;\n' % Const.tostr(self.sharing)
 		s += pad + 'MapCount = %s;\n' % Const.tostr(self.mapCount)
 		if self.weights is not None:
-			s += pad + 'Weights = %s\n' % Const.tostr(self.weights)
+			s += pad + 'Weights = %s;\n' % Const.tostr(self.weights)
 		s += '  }'
 		return s
 
