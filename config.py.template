@@ -10,5 +10,6 @@ HDP_ROOT_DIR = "\\\\msr-hdp\\scratch\\GW0013\\t-haishe"
 SCHEDULER = 'msr-hdp-gpu'
 
 # Job Template
-JOBTEMP = 'Cuda65-Nodes'
-# JOBTEMP = 'DevNodes'
+JOBTEMP = ('ExpressQ', "1:0:0")
+# JOBTEMP = ('Cuda65-Nodes', "Infinite")
+# JOBTEMP = ('DevNodes', "0:4:0")
