@@ -8,8 +8,8 @@ from config import *
 import scheduler
 
 def create(jobName, socket):
-	cmd = 'job new /scheduler:%s /jobtemplate:%s /numsockets:%s-%s /jobname:%s' \
-		% (SCHEDULER, JOBTEMP, socket, socket, jobName)
+	cmd = 'job new /scheduler:%s /jobtemplate:%s /numsockets:%s-%s /jobname:%s /runtime:%s' \
+		% (SCHEDULER, JOBTEMP[0], socket, socket, jobName, JOBTEMP[1])
 	p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
 	ret = p.stdout.read().split('\n')
 	jobID = None
@@ -156,6 +156,7 @@ if __name__ == '__main__':
 	if not os.path.exists(args.logfile):
 		print 'Log file "%s" doesn\'t exist' % args.logfile
 		exit()
+	print 'JobTemplate = %s' % str(JOBTEMP)
 	print 'Socket = %s' % args.socket
 
 	workdir = os.path.join(HDP_ROOT_DIR, os.getcwd()[3:])
