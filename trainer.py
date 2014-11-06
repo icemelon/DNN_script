@@ -6,7 +6,7 @@ import time
 from const import Const
 from logger import Logger
 from task import *
-from rsp import RspGenerator
+from rsp import *
 
 THRESHOLD = 0.1
 DEFAULT_LRED = 0.8
@@ -30,13 +30,9 @@ def parseTLCResult(fn):
 	return (meanErr, accuracy)
 
 class Trainer(object):
-	# NOTE!!: both dataset and logfile should be absolute path
 	def __init__(self, logger, dataset, scheduler):
-		# switch to working directory
-		os.chdir(dataset)
-
 		self.logger = logger
-		self.dataset = dataset		
+		self.dataset = dataset
 		self.scheduler = scheduler
 
 		# load from logger header
@@ -222,7 +218,7 @@ class Trainer(object):
 
 		while errcnt < 3:				
 			if fork:
-				task = ForkTask(self.rspTmpl, self.dataset, self.threadName, self.epoch, self.lr, self.nn, self.rs)
+				task = ForkTask(self.rsp, self.dataset, self.threadName, self.epoch, self.lr, self.nn, self.rs)
 				if not self.scheduler.execute(task):
 					print 'Error in executing task'
 					return False
@@ -234,7 +230,7 @@ class Trainer(object):
 					self.logger.log(text)
 				print 'ForkTask %s has been submitted' % task.taskName
 			else:
-				task = Task(self.rspTmpl, self.dataset, self.threadName, self.epoch, self.lr, self.nn, self.rs, self.subId)
+				task = Task(self.rsp, self.dataset, self.threadName, self.epoch, self.lr, self.nn, self.rs, self.subId)
 				if not self.scheduler.execute(task):
 					print 'Error in executing task'
 					return False
@@ -291,4 +287,44 @@ class Trainer(object):
 		return succ
 
 class SharedTrainer(object):
-	pass
+	def __init__(self, logger, dataset, scheduler):
+		self.logger = logger
+		self.dataset = dataset		
+		self.scheduler = scheduler
+
+		self.rspTmpl = RspTemplate.parseRspFile(headers['RspTmplFile'])
+
+		# load from logger header
+		headers = self.logger.headers
+
+		# Constant information
+		self.threadName = headers['ThreadName']
+		# random seed
+		self.rs = headers['rs'] if 'rs' in headers else None
+		# learning rate reduction
+		self.lred = headers['lred'] if 'lred' in headers else DEFAULT_LRED
+		# drop information
+		self.idrop = headers['idrop'] if 'idrop' in headers else None
+		self.hdrop = headers['hdrop'] if 'hdrop' in headers else None
+		self.dropEpoch = headers['DropEpoch'] if 'DropEpoch' in headers else None
+
+		# Create rsp generator
+		self.rsp = RspGenerator(headers['RspTmplFile'], self.idrop, self.hdrop, self.dropEpoch)
+
+		# initialize training status
+		self.epoch = 0
+		self.subId = 0 # subId for same epoch
+		self.lr = headers['lr'] # learning rate
+		self.nn = headers['nn'] # NN file for next epoch
+
+		# Accuracy and MeanErr for last epoch
+		self.lastAccuracy = 0.0	
+		self.lastMeanErr = 1000.0
+
+		# Record best result
+		self.bestAccuracy = 0.0
+		self.bestMeanErr = 1000.0
+		self.bestModel = None
+
+		# recover from logger
+		self.recover()

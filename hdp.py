@@ -142,14 +142,14 @@ if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description='Using TLC to train neural networks')
 	parser.add_argument('dataset', help='Working directory that contains dataset')
 	parser.add_argument('logfile', help='Log file (header should be initialed)')
-	parser.add_argument('socket', type=int, nargs='?', default=1, help='Socket number to use in the HDP job (Default: 1)')
+	parser.add_argument('-s', '--socket', type=int, default=1, help='Available socket number (Default: 1)')
+	parser.add_argument('--tlc', default=HDP_TLC_PATH, help='TLC executable path')
 
 	try:
 		args = parser.parse_args()
 	except:
 		exit()
 
-	args.dataset = os.path.abspath(args.dataset)
 	if not os.path.exists(args.dataset):
 		print 'Working directory "%s" doesn\'t exist' % args.dataset
 		exit()
@@ -159,14 +159,17 @@ if __name__ == '__main__':
 	print 'JobTemplate = %s' % str(JOBTEMP)
 	print 'Socket = %s' % args.socket
 
+	# let's replace Z:\ by HPD_ROOT_DIR
 	workdir = os.path.join(HDP_ROOT_DIR, os.getcwd()[3:])
 
 	script = os.path.relpath(scheduler.__file__)
-	command = "python %s %s" % (script, ' '.join(sys.argv[1:]))
+	command = "python %s %s %s -s %s --tlc %s" % \
+		(script, args.dataset, args.logfile, args.socket, args.tlc)
 	stdout = args.logfile[:-4] + ".out"
 
 	dataset = os.path.basename(args.dataset)
-	threadName = os.path.basename(args.logfile)[:-4]
+	threadName = os.path.basename(args.logfile)
+	threadName = threadName[:threadName.rfind('.')]
 	jobName = "%s_%s" % (dataset, threadName)
 
 	execute(jobName, args.socket, workdir, command, stdout)
