@@ -122,7 +122,7 @@ class RspTemplate(object):
 			f.write("/m %s\n" % binModel)
 			if textModel is not None: f.write("/mt %s\n" % textModel)
 
-class RspWrapper(object):
+class RspGenerator(object):
 	def __init__(self, rspTmplFile, idrop, hdrop, dropEpoch):
 		self.rspTmpl = RspTemplate.parseRspFile(rspTmplFile)
 		self.idrop = idrop
@@ -147,7 +147,7 @@ if __name__ == '__main__':
 	# rspTmpl = RspTemplate.parseRspFile(sys.argv[1])
 	# rspTmpl.writeToFile("1.rsp", 0.1, 'a.nn', 1, 'b.bin', 'b.nn')
 	# exit()
-	rsp = RspWrapper(sys.argv[1], .1, .5, 0)
+	rsp = RspGenerator(sys.argv[1], .1, .5, 0)
 	# exit()
 	class Task:
 		pass

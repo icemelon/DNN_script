@@ -6,6 +6,7 @@ import argparse
 
 from task import *
 from config import *
+from logger import Logger
 from trainer import Trainer
 
 class Scheduler(object):
@@ -84,7 +85,8 @@ if __name__ == '__main__':
 
 	scheduler = Scheduler(args.socket)
 
-	trainer = Trainer(args.dataset, args.logfile, scheduler)
+	logger = Logger(args.logfile)
+	trainer = Trainer(logger, args.dataset, scheduler)
 	print trainer.summary()
 	
 	trainer.train()

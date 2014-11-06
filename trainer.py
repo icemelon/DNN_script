@@ -6,9 +6,10 @@ import time
 from const import Const
 from logger import Logger
 from task import *
-from rsp import RspDescription
+from rsp import RspGenerator
 
 THRESHOLD = 0.1
+DEFAULT_LRED = 0.8
 
 def parseTLCResult(fn):
 	# loss function reduction
@@ -28,74 +29,55 @@ def parseTLCResult(fn):
 				continue
 	return (meanErr, accuracy)
 
-def parseLine(line):
-	line = line.strip()
-	cmd = line[1:line.index(']')]
-	content = line[line.index(']')+1:].strip()
-	return (cmd, content)
-
-def parseContent(content):
-	entry = {}
-	p = re.compile('\d+(\.\d+)?')
-	for e in content.split():
-		data = e.split('=')
-		if data[1].startswith('['):
-			l = []
-			for e in data[1].strip('[]').split(','):
-				if p.match(e):
-					e = eval(e)
-				l.append(e)
-			data[1] = l
-		elif p.match(data[1]):
-			data[1] = eval(data[1])
-		entry[data[0]] = data[1]
-	return entry
-
 class Trainer(object):
 	# NOTE!!: both dataset and logfile should be absolute path
-	def __init__(self, dataset, logfile, scheduler):
+	def __init__(self, logger, dataset, scheduler):
 		# switch to working directory
 		os.chdir(dataset)
 
-		self.dataset = dataset
-		self.logger = Logger(logfile)
+		self.logger = logger
+		self.dataset = dataset		
 		self.scheduler = scheduler
 
-		self.history = {}
-		self.threadName = None
-		# rsp file template
-		self.rspTmpl = None
+		# load from logger header
+		headers = self.logger.headers
+
+		# Constant information
+		self.threadName = headers['ThreadName']
+		# random seed
+		self.rs = headers['rs'] if 'rs' in headers else None
+		# learning rate reduction
+		self.lred = headers['lred'] if 'lred' in headers else DEFAULT_LRED
+		# drop information
+		self.idrop = headers['idrop'] if 'idrop' in headers else None
+		self.hdrop = headers['hdrop'] if 'hdrop' in headers else None
+		self.dropEpoch = headers['DropEpoch'] if 'DropEpoch' in headers else None
+
+		# Create rsp generator
+		self.rsp = RspGenerator(headers['RspTmplFile'], self.idrop, self.hdrop, self.dropEpoch)
+
+		# initialize training status
 		self.epoch = 0
 		self.subId = 0 # subId for same epoch
-		# learning rate
-		self.lr = None
-		# learning rate reduction
-		self.lred = 0.8
-		# NN description for next epoch
-		self.nn = None
-		# random seed
-		self.rs = None
-		# dropout
-		self.idrop = None # input drop
-		self.hdrop = None # hidden drop
-		self.dropEpoch = 0 # first epoch to drop (default: 0, drop from beginning)
+		self.lr = headers['lr'] # learning rate
+		self.nn = headers['nn'] # NN file for next epoch
 
-		self.accuracy = 0.0
-		self.meanErr = 1000.0
+		# Accuracy and MeanErr for last epoch
+		self.lastAccuracy = 0.0	
+		self.lastMeanErr = 1000.0
 
+		# Record best result
 		self.bestAccuracy = 0.0
 		self.bestMeanErr = 1000.0
 		self.bestModel = None
 
-		# parse to the end of log
-		self.parseLog()
-		# recover from any crash
+		# recover from logger
 		self.recover()
 
 	def summary(self):
 		s = 'Dataset = %s, Thread Name = %s\n' % (os.path.basename(self.dataset), self.threadName)
 		s += '\nHistory:\n'
-		s += '\n'.join(str(x) for x in self.history.values())
+		s += '\n'.join(str(x) for x in self.logger.history)
 		s += '\n\nStatus:\n'
 		s += '  Epoch = %s\n' % self.epoch
 		if self.subId > 0:
@@ -107,109 +89,31 @@ class Trainer(object):
 		s += '  idrop = %s\n' % self.idrop
 		s += '  hdrop = %s\n' % self.hdrop
 		s += '  DropEpoch = %s\n' % self.dropEpoch
-		s += '  MeanErr = %s\n' % self.meanErr
-		s += '  Accuracy = %s\n' % self.accuracy
+		s += '  MeanErr = %s\n' % self.bestMeanErr
+		s += '  Accuracy = %s\n' % self.bestAccuracy
 		return s
 	__str__ = summary
 
-	def parseLog(self):
-		# load logfile
-		header, logs = self.logger.readToEnd()
-
-		for item in header.split():
-			data = item.split('=')
-			data[0] = data[0].lower()
-			if data[0] == 'name':
-				self.threadName = data[1]
-			elif data[0] == 'rsptemplate':
-				# load template rsp file
-				rspTmplFile = data[1]
-			elif data[0] == 'lr':
-				self.lr = eval(data[1])
-			elif data[0] == 'nn':
-				self.nn = data[1]
-			elif data[0] == 'lred':
-				self.lred = eval(data[1])
-			elif data[0] == 'rs':
-				self.rs = Const.parseValueOrArray(data[1])
-			elif data[0] == 'idrop':
-				self.idrop = eval(data[1])
-			elif data[0] == 'hdrop':
-				self.hdrop = eval(data[1])
-			elif data[0] == 'dropepoch':
-				self.dropEpoch = eval(data[1])
-		self.rspTmpl = RspDescription(rspTmplFile, self.idrop, self.hdrop, self.dropEpoch)
-
-		index = 0
-		while index < len(logs):
-			cmd, content = parseLine(logs[index])
-			index += 1
-
-			if cmd == 'JOB NEW':
-				job = parseContent(content)
-				job['Fork'] = False
-				job['Finish'] = False
-				self.history[job['Epoch']] = job
-				# force LR equal to the history
-				self.lr = job['LR']
-
-			elif cmd == 'JOB END':
-				entry = parseContent(content)
-				entry['Finish'] = True
-				job = self.history[entry['Epoch']]
-				job.update(entry)
-				# update trainer status for next epoch
-				self.update(job['MeanErr'], job['Accuracy'], job['Model'], job['Fork'], log=False)
-
-			elif cmd == 'FORKJOB NEW':
-				job = parseContent(content)
-				job['Fork'] = True
-				job['TaskList'] = {}
-				job['Finish'] = False
-				self.history[job['Epoch']] = job
-
-			elif cmd == 'FORKJOB END':
-				entry = parseContent(content)
-				entry['Finish'] = True
-				job = self.history[entry['Epoch']]
-				job.update(entry)
-				# update trainer status for next epoch
-				self.rs = job['RS']
-				self.update(job['MeanErr'], job['Accuracy'], job['Model'], job['Fork'], log=False)
-
-			elif cmd == 'TASK NEW':
-				task = parseContent(content)
-				task['Finish'] = False
-				self.history[self.epoch]['TaskList'][task['SubId']] = task
-
-			elif cmd == 'TASK END':
-				entry = parseContent(content)
-				entry['Finish'] = True
-				self.history[self.epoch]['TaskList'][entry['SubId']].update(entry)
-
-			elif cmd == 'UPDATE':
-				data = content.split('=')
-				data[0] = data[0].lower()
-				if data[0] == 'lr':
-					self.lr = eval(data[1])
-				elif data[0] == 'lred':
-					self.lred = eval(data[1])
-				elif data[0] == 'rs':
-					self.rs = eval(data[1])
-
+	# recover traingin status from logger history
 	def recover(self):
-		if len(self.history) == 0:
+		history = self.logger.history
+		if len(history) == 0:
 			return
-		if self.epoch not in self.history:
-			# already advance to next epoch
-			return
-		if self.history[self.epoch]['Finish']:
-			# last epoch finished
-			return
-		# now start to recover last epoch
-		# if job is finished but not written in the log 
-		job = self.history[self.epoch]
+		# check if last job finishes
+		lastJob = history[-1]
+		if not lastJob['Finish']:
+			self.tryRecoverJob(lastJob)
+			if not lastJob['Finish']:
+				history = history[:-1] # remove unfinished job
+		for job in history:
+			self.update(job['MeanErr'], job['Accuracy'], job['Model'], job['Fork'])
+			if job['Fork']:
+				self.rs = job['RS']
+
+	# check if job finished but not written in the log
+	def tryRecoverJob(self, job):
 		if job['Fork']:
+			# recover fork job
 			taskList = job['TaskList']
 			if len(taskList) == 0:
 				# job hasn't started
@@ -221,6 +125,7 @@ class Trainer(object):
 			rs = None
 			for task in taskList.values():
 				if not task['Finish']:
+					# recover single task
 					if os.path.exists(task['Model']) and os.path.exists(task['Stdout']):
 						(err, acc) = parseTLCResult(task['Stdout'])
 						if err is not None and acc is not None:
@@ -241,23 +146,55 @@ class Trainer(object):
 				job['Accuracy'] = accuracy
 				job['Model'] = model
 				job['RS'] = rs
-				self.logger.log('[FORKJOB END] Epoch=%s MeanErr=%s Accuracy=%s Model=%s RS=%s' % (self.epoch, meanErr, accuracy, model, rs))
-				# update trainer status for next epoch
-				self.rs = rs
-				self.logger.log('[UPDATE] RS=%s' % self.rs)
-				self.update(meanErr, accuracy, model, job['Fork'], log=True)
+				job['Finish'] = True
+				self.logger.log('[FORKJOB END] Epoch=%s MeanErr=%s Accuracy=%s Model=%s RS=%s' % (job['Epoch'], meanErr, accuracy, model, rs))
 		else:
 			if os.path.exists(job['Model']) and os.path.exists(job['Stdout']):
 				(meanErr, accuracy) = parseTLCResult(job['Stdout'])
 				if meanErr is not None and accuracy is not None:
 					# job is indeed finished, need to update the log
-					self.logger.log('[JOB END] Epoch=%s MeanErr=%s Accuracy=%s' % (self.epoch, meanErr, accuracy))
 					job['MeanErr'] = meanErr
 					job['Accuracy'] = accuracy
 					job['Finish'] = True
-					# update trainer status for next epoch
-					self.update(meanErr, accuracy, job['Model'], job['Fork'], log=True)
+					self.logger.log('[JOB END] Epoch=%s MeanErr=%s Accuracy=%s' % (job['Epoch'], meanErr, accuracy))
 	
+	# update training status
+	def update(self, meanErr, acc, model, fork):
+		reduceLR = False
+		# decide whether to reduce LR
+		if acc < self.lastAccuracy:
+			reduceLR = True
+		elif acc == self.lastAccuracy and meanErr >= self.lastMeanErr:
+			reduceLR = True
+		
+		# decide whether to advance to next epoch
+		if self.epoch == 0 and acc < THRESHOLD:
+			if fork:
+				# all forks are bad, stop training
+				print 'All forks have bad results. Stop now.'
+				exit()
+			# if the accuracy of 1st epoch is too low, then change a random seed
+			self.rs = 1 if self.rs is None else self.rs+1
+			# keep stay at epoch 0, increase subId
+			self.subId += 1
+		else:
+			self.epoch += 1
+			self.subId = 0
+			self.nn = model
+			self.lastAccuracy = acc
+			self.lastMeanErr = meanErr
+
+			if acc > self.bestAccuracy:
+				self.bestAccuracy = acc
+				self.bestMeanErr = meanErr
+				self.bestModel = model
+			elif acc == self.bestAccuracy and self.bestMeanErr > meanErr:
+				self.bestAccuracy = acc
+				self.bestMeanErr = meanErr
+				self.bestModel = model
+			if reduceLR:
+				self.lr *= self.lred
+
 	def train(self):
 		print '\nStart training thread %s' % self.threadName
 
@@ -353,45 +290,5 @@ class Trainer(object):
 
 		return succ
 
-	def update(self, meanErr, acc, model, fork, log=True):
-		reduceLR = False
-		# decide whether to reduce LR
-		if acc < self.accuracy:
-			reduceLR = True
-		elif acc == self.accuracy:
-			if meanErr >= self.meanErr:
-				reduceLR = True
-		
-		# decide whether to advance to next epoch
-		if self.epoch == 0 and acc < THRESHOLD:
-			if fork:
-				# all forks are bad, stop training
-				print 'All forks have bad results. Stop now.'
-				exit()
-			# if the accuracy of 1st epoch is too low, then change a random seed
-			self.rs = 1 if self.rs is None else self.rs+1
-			# keep stay at epoch 0, increase subId
-			self.subId += 1
-			if log:
-				self.logger.log('[UPDATE] RS=%s' % self.rs)
-		else:
-			self.epoch += 1
-			self.subId = 0
-			self.nn = model
-			self.accuracy = acc
-			self.meanErr = meanErr
-
-			if acc > self.bestAccuracy:
-				self.bestAccuracy = acc
-				self.bestMeanErr = meanErr
-				self.bestModel = model
-			elif acc == self.bestAccuracy and self.bestMeanErr > meanErr:
-				self.bestAccuracy = acc
-				self.bestMeanErr = meanErr
-				self.bestModel = model
-
-			if reduceLR:
-				self.lr *= self.lred
-				if log:
-					self.logger.log('[UPDATE] LR=%s' % self.lr)
-	
+class SharedTrainer(object):
+	pass
