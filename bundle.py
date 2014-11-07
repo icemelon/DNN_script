@@ -6,6 +6,9 @@ class Bundle(object):
 	def __init__(self, inputLayer):
 		self.input = inputLayer
 
+	def removeConst(self):
+		pass
+
 	@staticmethod
 	def parse(inputLayer, tokens):
 		bundleType = tokens.pop(separators='{;')
@@ -37,6 +40,11 @@ class FullBundle(Bundle):
 		super(FullBundle, self).__init__(inputLayer)
 		self.weights = attrs.get("Weights", None)
 
+	def removeConst(self):
+		if self.weights is not None:
+			Const.remove(self.weights)
+			self.weights = None
+
 	def __str__(self):
 		if self.weights is None:
 			return "  from %s all;" % self.input.name
@@ -51,10 +59,16 @@ class ConvolveBundle(Bundle):
 		self.sharing = attrs['Sharing'] if 'Sharing' in attrs else None
 		self.weights = attrs['Weights'] if 'Weights' in attrs else None
 
-	def computeDimOutput(self):
-		dimOutput = self.geo.dimOutput
-		dimOutput[0] *= self.mapCount
-		return dimOutput
+	def removeConst(self):
+		if self.weights is not None:
+			Const.remove(self.weights)
+			self.weights = None
+
+	# current not working		
+	# def computeDimOutput(self):
+	# 	dimOutput = self.geo.dimOutput
+	# 	dimOutput[0] *= self.mapCount
+	# 	return dimOutput
 
 	def __str__(self):
 		s = '  from %s convolve {\n' % self.input.name

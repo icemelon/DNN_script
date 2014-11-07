@@ -2,11 +2,13 @@ import os
 import sys
 import re
 import time
+import subprocess
 
 from const import Const
 from logger import Logger
 from task import *
 from rsp import *
+from nn import NeuralNetwork
 
 THRESHOLD = 0.1
 DEFAULT_LRED = 0.8
@@ -30,7 +32,14 @@ def parseTLCResult(fn):
 	return (meanErr, accuracy)
 
 class Trainer(object):
-	def __init__(self, logger, dataset, scheduler):
+	def summary(self):
+		pass
+
+	def train(self):
+		pass
+
+class RegularTrainer(Trainer):
+	def __init__(self, logger, dataset, scheduler, rspTmpl=None):
 		self.logger = logger
 		self.dataset = dataset
 		self.scheduler = scheduler
@@ -50,7 +59,11 @@ class Trainer(object):
 		self.dropEpoch = headers['DropEpoch'] if 'DropEpoch' in headers else None
 
 		# Create rsp generator
-		self.rsp = RspGenerator(headers['RspTmplFile'], self.idrop, self.hdrop, self.dropEpoch)
+		if rspTmpl is not None:
+			# use customized rsp template
+			self.rsp = RspGenerator(rspTmpl, self.idrop, self.hdrop, self.dropEpoch)
+		else:
+			self.rsp = RspGenerator(headers['RspTmplFile'], self.idrop, self.hdrop, self.dropEpoch)
 
 		# initialize training status
 		self.epoch = 0
@@ -71,7 +84,8 @@ class Trainer(object):
 		self.recover()
 
 	def summary(self):
-		s = 'Dataset = %s, Thread Name = %s\n' % (os.path.basename(self.dataset), self.threadName)
+		s = '[Regular Trainer]\n'
+		s += 'Dataset = %s, Thread Name = %s\n' % (os.path.basename(self.dataset), self.threadName)
 		s += '\nHistory:\n'
 		s += '\n'.join(str(x) for x in self.logger.history)
 		s += '\n\nStatus:\n'
@@ -286,45 +300,150 @@ class Trainer(object):
 
 		return succ
 
-class SharedTrainer(object):
+class SharedTrainer(Trainer):
 	def __init__(self, logger, dataset, scheduler):
 		self.logger = logger
 		self.dataset = dataset		
 		self.scheduler = scheduler
 
-		self.rspTmpl = RspTemplate.parseRspFile(headers['RspTmplFile'])
-
 		# load from logger header
 		headers = self.logger.headers
-
-		# Constant information
 		self.threadName = headers['ThreadName']
-		# random seed
-		self.rs = headers['rs'] if 'rs' in headers else None
-		# learning rate reduction
-		self.lred = headers['lred'] if 'lred' in headers else DEFAULT_LRED
-		# drop information
-		self.idrop = headers['idrop'] if 'idrop' in headers else None
-		self.hdrop = headers['hdrop'] if 'hdrop' in headers else None
-		self.dropEpoch = headers['DropEpoch'] if 'DropEpoch' in headers else None
+		self.rspTmpl = RspTemplate.parseRspFile(headers['RspTmplFile'])
+		self.sharedLayers = headers['Shared']
+		self.trainedNNFile = headers['TrainedNN']
 
-		# Create rsp generator
-		self.rsp = RspGenerator(headers['RspTmplFile'], self.idrop, self.hdrop, self.dropEpoch)
+		# bottom and top NN files
+		self.bottomNNFile = "%s.bottom.nn" % self.threadName
+		self.bottomBinFile = "%s.bottom.bin" % self.threadName
+		self.topNNFile = "%s.top.nn" % self.threadName # to be trained
 
-		# initialize training status
-		self.epoch = 0
-		self.subId = 0 # subId for same epoch
-		self.lr = headers['lr'] # learning rate
-		self.nn = headers['nn'] # NN file for next epoch
+		# train and test dataset files
+		self.trainDataset = "%s.train.txt" % self.threadName
+		self.trainDatasetBin = "%s.train.txt.tlcbin" % self.threadName
+		self.testDataset = "%s.test.txt" % self.threadName
+		self.testDatasetBin = "%s.test.txt.tlcbin" % self.threadName
 
-		# Accuracy and MeanErr for last epoch
-		self.lastAccuracy = 0.0	
-		self.lastMeanErr = 1000.0
+		# generate bottomNN and topNN
+		self.generateNN()
 
-		# Record best result
-		self.bestAccuracy = 0.0
-		self.bestMeanErr = 1000.0
-		self.bestModel = None
+		# update initial nn file in logger's headers
+		self.logger.headers['nn'] = self.topNNFile
 
-		# recover from logger
-		self.recover()
+		# generate train and test dataset
+		self.generateDataset('train')
+		self.generateDataset('test')
+
+		# change train and test dataset in rsp template
+		self.rspTmpl.trainDataset = self.trainDatasetBin
+		self.rspTmpl.testDataset = self.testDatasetBin
+		self.rspTmpl.options['/inst'] = 'BinaryInstances'
+		if '/instset' in self.rspTmpl.options:
+			# no input scale
+			del self.rspTmpl.options['/instset']
+
+		self.trainer = RegularTrainer(logger, dataset, scheduler, self.rspTmpl)
+
+	def generateNN(self):
+		# parse trained NN
+		fin = open(self.trainedNNFile)
+		nn = NeuralNetwork.parseNN(fin)
+		bottomNN, topNN = nn.split(self.sharedLayers)
+
+		if not os.path.exists(self.topNNFile):
+			print "[SHARED] Creating top nn file"
+			with open(self.topNNFile, 'w') as fout:
+				fout.write(str(topNN))
+
+		if not os.path.exists(self.bottomNNFile):
+			# first write bottomNN in text format
+			print "[SHARED] Creating bottom model in text format"
+			begin = time.time()
+			with open(self.bottomNNFile, 'w') as fout:
+				fout.write("%s\n" % str(bottomNN))
+				Const.output(fout, fin)
+			end = time.time()
+			print "[SHARED] Finish in %.1f s" % (end-begin)
+		fin.close() # no longer need it
+
+		if not os.path.exists(self.bottomBinFile):
+			# generate Rsp that converts text format nn to binary format
+			print "[SHARED] Creating bottom model in binary format"
+			begin = time.time()
+			genBottomRsp = "%s.bottom.gen.rsp" % self.threadName
+			with open(genBottomRsp, 'w') as fout:
+				fout.write("/c Train %s\n" % self.rspTmpl.trainDataset)
+				fout.write("/cl mcnn { filename=%s iter=0 }\n" % self.bottomNNFile)
+				fout.write("/m %s" % self.bottomBinFile)
+
+			# run TLC to generate binary model
+			command = "%s @%s" % (self.scheduler.tlcpath, genBottomRsp)
+			proc = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE)
+			proc.communicate()
+			end = time.time()
+
+			if not os.path.exists(self.bottomBinFile):
+				raise Exception("Error in generating bottom model in binary format")
+
+			print "[SHARED] Finish in %.1f s" % (end-begin)
+
+	# datasetType: train,test
+	def generateDataset(self, datasetType):
+		originDataset = self.rspTmpl.__dict__["%sDataset" % datasetType]
+		dataset = self.__dict__["%sDataset" % datasetType]
+		datasetBin = self.__dict__["%sDatasetBin" % datasetType]
+
+		if not os.path.exists(dataset):
+			# pass the bottom model to dataset
+			print "[SHARED] Generating %s dataset" % datasetType
+			begin = time.time()
+			genRsp = "%s.%s.gen.rsp" % (self.threadName, datasetType)
+			with open(genRsp, 'w') as fout:
+				fout.write("/c Test %s\n" % originDataset)
+				if '/inst' in self.rspTmpl.options:
+					fout.write("/inst %s\n" % self.rspTmpl.options['/inst'])
+				if '/instset' in self.rspTmpl.options:
+					fout.write("/instset %s\n" % self.rspTmpl.options['/instset'])
+				fout.write("/m %s\n" % self.bottomBinFile)
+				fout.write("/cacheinst-\n")
+				fout.write("/threads-\n")
+				fout.write("/raw %s" % dataset)
+			# run TLC to generate binary model
+			command = "%s @%s" % (self.scheduler.tlcpath, genRsp)
+			proc = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE)
+			proc.communicate()
+			end = time.time()
+			if not os.path.exists(dataset):
+				raise Exception("Error in generating %s dataset" % datasetType)
+			print "[SHARED] Finish in %.1f s" % (end-begin)
+
+		if not os.path.exists(datasetBin):
+			# convert dataset to binary format
+			print "[SHARED] Converting %s dataset to binary format" % datasetType
+			begin = time.time()
+			makebinRsp = "%s.%s.MakeBin.rsp" % (self.threadName, datasetType)
+			with open(makebinRsp, 'w') as fout:
+				fout.write("/c CreateInstances %s\n" % dataset)
+				fout.write("/instancesClass TextInstances\n")
+				fout.write("/instanceWriter BinaryInstanceWriter { ltype=u2 ftype=r4 dense=+ }")
+			# run TLC to generate binary model
+			command = "%s @%s" % (self.scheduler.tlcpath, makebinRsp)
+			proc = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE)
+			proc.communicate()
+			end = time.time()
+			if not os.path.exists(datasetBin):
+				raise Exception("Error in making binary for %s dataset" % datasetType)
+			print "[SHARED] Finish in %.1f s" % (end-begin)
+
+	def summary(self):
+		s = "[Shared Trainer]\n"
+		s += "Shared Layers = %s\n" % self.sharedLayers
+		s += "Bottom Model = %s\n" % self.bottomBinFile
+		s += "Top NN = %s\n" % self.topNNFile
+		s += "Train Dataset = %s\n" % self.trainDatasetBin
+		s += "Test Dataset = %s\n" % self.testDatasetBin
+		s += "\n%s" % self.trainer.summary()
+		return s
+
+	def train(self):
+		self.trainer.train()

@@ -10,6 +10,9 @@ class Layer(object):
 		self.name = name
 		self.dimOutput = dimOutput
 
+	def removeConst(self):
+		pass
+
 	def computeDimOutput(self):
 		return self.dimOutput
 
@@ -78,6 +81,12 @@ class HiddenLayer(Layer):
 		self.bundle = bundle
 		self.biases = attrs.get("Biases", None)
 
+	def removeConst(self):
+		if self.biases is not None:
+			Const.remove(self.biases)
+			self.biases = None
+		self.bundle.removeConst()
+
 	def __str__(self):
 		s = "hidden %s %s %s {\n" % (self.name, self.dimOutput_to_str(), self.outputFunc)
 		if self.biases is not None:
@@ -92,11 +101,15 @@ class OutputLayer(Layer):
 		self.bundle = bundle
 		self.biases = attrs.get("Biases", None)
 
+	def removeConst(self):
+		if self.biases is not None:
+			Const.remove(self.biases)
+			self.biases = None
+		self.bundle.removeConst()
+
 	def __str__(self):
-		s = "output %s %s %s" % (self.name, self.dimOutput_to_str(), self.outputFunc)
-		if self.biases is None:
-			s += "\n%s" % self.bundle
-		else:
-			s += " {\n  Biases = %s;\n" % Const.tostr(self.biases)
-			s += "%s\n}" % self.bundle
+		s = "output %s %s %s {\n" % (self.name, self.dimOutput_to_str(), self.outputFunc)
+		if self.biases is not None:
+			s += "  Biases = %s;\n" % Const.tostr(self.biases)
+		s += "%s\n}" % self.bundle
 		return s

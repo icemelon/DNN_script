@@ -22,9 +22,9 @@ def create(jobName, socket):
 		print '\n'.join(ret)
 	return jobID
 
-def addTask(jobID, socket, workdir, command, stdout):
-	cmd = 'job add %s /scheduler:%s /workdir:%s /numsockets:%s-%s /stdout:%s %s' \
-		% (jobID, HDP_SCHEDULER, workdir, socket, socket, stdout, command)
+def addTask(jobID, socket, workdir, command, stdout, stderr):
+	cmd = 'job add %s /scheduler:%s /workdir:%s /numsockets:%s-%s /stdout:%s /stderr:%s %s' \
+		% (jobID, HDP_SCHEDULER, workdir, socket, socket, stdout, stderr, command)
 	p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
 	ret = p.stdout.read()
 	if 'added' in ret:
@@ -43,15 +43,15 @@ def submit(jobID):
 		print ret
 		return False
 
-def execute(jobName, socket, workdir, command, stdout):
+def execute(jobName, socket, workdir, command, stdout, stderr):
 	jobID = create(jobName, socket)
 	if jobID is None:
 		return False
 	print "Created job %s" % jobID
 
-	if not addTask(jobID, socket, workdir, command, stdout):
+	if not addTask(jobID, socket, workdir, command, stdout, stderr):
 		return False
-	print "Added task \"%s\" (stdout: %s)" % (command, stdout)
+	print "Added task \"%s\" (stdout: %s, stderr: %s)" % (command, stdout, stderr)
 	
 	if not submit(jobID):
 		return False
@@ -93,11 +93,12 @@ if __name__ == '__main__':
 	script = os.path.relpath(scheduler.__file__)
 	command = "python %s %s %s -s %s --tlc %s" % \
 		(script, args.dataset, args.logfile, args.socket, args.tlc)
-	stdout = args.logfile[:-4] + ".out"
+	stdout = os.path.splitext(args.logfile)[0] + ".out"
+	stderr = os.path.splitext(args.logfile)[0] + ".err"
 
 	dataset = os.path.basename(args.dataset)
 	threadName = os.path.basename(args.logfile)
 	threadName = threadName[:threadName.rfind('.')]
 	jobName = "%s_%s" % (dataset, threadName)
 
-	execute(jobName, args.socket, workdir, command, stdout)
+	execute(jobName, args.socket, workdir, command, stdout, stderr)

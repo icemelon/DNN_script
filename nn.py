@@ -61,14 +61,46 @@ class NeuralNetwork(object):
 				
 		return True
 
+	# num: split at num-th layer from the beginning
+	# return: (bottom NN, top NN)
+	def split(self, num):
+		# init topNN and its input
+		topNN = NeuralNetwork()
+		dimInput = self.layers[num - 1].dimOutput
+		if type(dimInput) is list:
+			dimInput = reduce(lambda x,y: x*y, dimInput)
+		topInputLayer = InputLayer("vector", dimInput)
+		topNN.layers.append(topInputLayer)
+
+		# change the input of first hidden layer in topNN
+		layer = self.layers[num]
+		layer.bundle.input = topInputLayer
+		layer.removeConst()
+		topNN.layers.append(layer)
+
+		# add the rest of top layers into topNN
+		for i in range(num+1, len(self.layers)):
+			layer = self.layers[i]
+			layer.removeConst()
+			topNN.layers.append(layer)
+
+		# remove top layers from bottomNN
+		for _ in range(len(self.layers) - num):
+			self.layers.pop()
+
+		# change last layer of bottomNN
+		layer = self.layers.pop()
+		attrs = {"Biases": layer.biases}
+		newLayer = OutputLayer(layer.name, layer.dimOutput, layer.outputFunc, layer.bundle, attrs)
+		self.layers.append(newLayer)
+
+		return (self, topNN)
+
+	# num: num of last layers to remove
 	def removeLayers(self, num):
 		for _ in range(num):
 			layer = self.layers.pop()
-			bundle = layer.bundle
-			if layer.biases is not None:
-				Const.remove(layer.biases)
-			if 'weights' in dir(bundle) and bundle.weights is not None:
-				Const.remove(bundle.weights)
+			layer.removeConst()
 		# change last layer into output layer
 		layer = self.layers.pop()
 		attrs = {"Biases": layer.biases}

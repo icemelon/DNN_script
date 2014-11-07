@@ -82,3 +82,6 @@ if __name__ == '__main__':
 
 	end = time.time()
 	log("Output finishes (%.1f s)" % (end-begin))
+
+	args.input.close()
+	args.output.close()

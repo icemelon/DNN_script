@@ -3,9 +3,9 @@ from tokenparser import StringTokenParser
 class RspTemplate(object):
 	def __init__(self):
 		self.core = None
+		self.classifier = None
 		self.trainDataset = None
 		self.testDataset = None
-		self.classifier = None
 		self.rs = None
 		self.options = {}
 
@@ -123,8 +123,12 @@ class RspTemplate(object):
 			if textModel is not None: f.write("/mt %s\n" % textModel)
 
 class RspGenerator(object):
-	def __init__(self, rspTmplFile, idrop, hdrop, dropEpoch):
-		self.rspTmpl = RspTemplate.parseRspFile(rspTmplFile)
+	# rspTmpl could be either RspTemplate obj, or rsp template file
+	def __init__(self, rspTmpl, idrop, hdrop, dropEpoch):
+		if type(rspTmpl) is RspTemplate:
+			self.rspTmpl = rspTmpl
+		else:
+			self.rspTmpl = RspTemplate.parseRspFile(rspTmpl)
 		self.idrop = idrop
 		self.hdrop = hdrop
 		self.dropEpoch = dropEpoch

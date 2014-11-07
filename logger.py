@@ -67,6 +67,10 @@ class Logger(object):
 				self.headers['hdrop'] = eval(data[1])
 			elif data[0] == 'dropepoch':
 				self.headers['DropEpoch'] = eval(data[1])
+			elif data[0] == 'trainednn':
+				self.headers['TrainedNN'] = data[1]
+			elif data[0] == 'shared':
+				self.headers['Shared'] = eval(data[1])
 
 	def parseHistory(self, logs):
 		index = 0
@@ -116,11 +120,5 @@ class Logger(object):
 				self.history[-1]['TaskList'][entry['SubId']].update(entry)
 
 			elif cmd == 'UPDATE':
-				# we should ignore this
+				# no longer support UPDATE
 				continue
-				# data = content.split('=')
-				# data[0] = data[0].lower()
-				# if data[0] == 'lr':
-				# 	self.headers['lr'] = eval(data[1])
-				# elif data[0] == 'rs':
-				# 	self.headers['rs'] = eval(data[1])

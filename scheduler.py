@@ -7,7 +7,7 @@ import argparse
 from task import *
 from config import *
 from logger import Logger
-from trainer import Trainer
+from trainer import *
 
 class Scheduler(object):
 	def __init__(self, maxSocket, tlcpath):
@@ -17,7 +17,7 @@ class Scheduler(object):
 		self.running = {}
 
 	def log(self, msg):
-		sys.stdout.write("%s\n" % msg)
+		sys.stdout.write("[%s] %s\n" % (time.asctime(), msg))
 		sys.stdout.flush()
 
 	def updateAndRun(self):
@@ -25,7 +25,7 @@ class Scheduler(object):
 		for task in self.running:
 			proc = self.running[task]
 			if proc.poll() is not None:
-				self.log("[%s] Task %s finished" % (time.asctime(), task.taskName))
+				self.log("Task %s finished" % task.taskName)
 				finished.append(task)
 
 		for task in finished:
@@ -36,7 +36,7 @@ class Scheduler(object):
 			cmd = "%s @%s > %s" % (self.tlcpath, task.rspFile, task.stdout)
 			proc = subprocess.Popen(cmd, cwd=task.rootdir, shell=True, universal_newlines=True)
 			self.running[task] = proc
-			self.log("[%s] Task %s is running" % (time.asctime(), task.taskName))
+			self.log("Task %s is running" % task.taskName)
 
 	def execute(self, task):
 		if isinstance(task, Task):
@@ -92,7 +92,11 @@ if __name__ == '__main__':
 	os.chdir(args.dataset)
 
 	logger = Logger(args.logfile)
-	trainer = Trainer(logger, args.dataset, scheduler)
+	if 'Shared' in logger.headers:
+		trainer = SharedTrainer(logger, args.dataset, scheduler)
+	else:
+		trainer = RegularTrainer(logger, args.dataset, scheduler)
+	print
 	print trainer.summary()
 	
 	trainer.train()
