@@ -1,6 +1,11 @@
 
-# location of TLC
-LOCAL_TLC_PATH = "E:\\haichen\\TLC_2.7.93.0.Single\\TL.exe"
+### Local Configuration ###
+
+# LOCAL_TLC_PATH = "E:\\haichen\\TLC_2.7.93.0.Single\\TL.exe"
+LOCAL_TLC_PATH = "E:\\haichen\\TLC_MCDNN.Single\\TL.exe"
+
+### HDP Configuration ###
+
 # HDP_TLC_PATH = "\\\\msr-hdp\\scratch\\GW0013\\t-haishe\\TLC_2.6.45.0.Single\\TL.exe"
 HDP_TLC_PATH = "\\\\msr-hdp\\scratch\\GW0013\\t-haishe\\TLC_2.7.93.0.Single\\TL.exe"
 
@@ -8,9 +13,9 @@ HDP_TLC_PATH = "\\\\msr-hdp\\scratch\\GW0013\\t-haishe\\TLC_2.7.93.0.Single\\TL.
 HDP_ROOT_DIR = "\\\\msr-hdp\\scratch\\GW0013\\t-haishe"  
 
 # GCD Scheduler Head
-SCHEDULER = 'msr-hdp-gpu'
+HDP_SCHEDULER = 'msr-hdp-gpu'
 
 # (Job Template, Runtime)
-JOBTEMP = ('ExpressQ', "1:0:0") # it can run upto 1 day
+HDP_JOBTEMP = ('ExpressQ', "1:0:0") # it can run upto 1 day
 # JOBTEMP = ('Cuda65-Nodes', "Infinite") # infinite runtime
 # JOBTEMP = ('DevNodes', "0:4:0") # it can run upto 4 hours

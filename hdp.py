@@ -9,7 +9,7 @@ import scheduler
 
 def create(jobName, socket):
 	cmd = 'job new /scheduler:%s /jobtemplate:%s /numsockets:%s-%s /jobname:%s /runtime:%s' \
-		% (SCHEDULER, JOBTEMP[0], socket, socket, jobName, JOBTEMP[1])
+		% (HDP_SCHEDULER, HDP_JOBTEMP[0], socket, socket, jobName, HDP_JOBTEMP[1])
 	p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
 	ret = p.stdout.read().split('\n')
 	jobID = None
@@ -24,7 +24,7 @@ def create(jobName, socket):
 
 def addTask(jobID, socket, workdir, command, stdout):
 	cmd = 'job add %s /scheduler:%s /workdir:%s /numsockets:%s-%s /stdout:%s %s' \
-		% (jobID, SCHEDULER, workdir, socket, socket, stdout, command)
+		% (jobID, HDP_SCHEDULER, workdir, socket, socket, stdout, command)
 	p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
 	ret = p.stdout.read()
 	if 'added' in ret:
@@ -34,7 +34,7 @@ def addTask(jobID, socket, workdir, command, stdout):
 		return False
 
 def submit(jobID):
-	cmd = 'job submit /scheduler:%s /id:%s' % (SCHEDULER, jobID)
+	cmd = 'job submit /scheduler:%s /id:%s' % (HDP_SCHEDULER, jobID)
 	p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
 	ret = p.stdout.read()
 	if 'submitted' in ret:
@@ -58,85 +58,13 @@ def execute(jobName, socket, workdir, command, stdout):
 	print "Submitted job %s" % jobID
 
 def finish(jobName):
-	cmd = 'job list /scheduler:%s /jobname:%s' % (SCHEDULER, jobName)
+	cmd = 'job list /scheduler:%s /jobname:%s' % (HDP_SCHEDULER, jobName)
 	p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
 	ret = p.stdout.read()
 	if 'Running' in ret or 'Queued' in ret:
 		return False
 	else:
 		return True
-
-"""
-class HDPJob(object):
-	def __init__(self, maxSocket):
-		self.maxSocket = maxSocket
-		self.jobId = None
-
-	def create(self, taskName, socket):
-		self.jobName = taskName
-		cmd = 'job new /scheduler:%s /jobtemplate:%s /numsockets:%s-%s /jobname:%s' % (SCHEDULER, JOBTEMP, socket, socket, taskName)
-		p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
-		ret = p.stdout.read().split('\n')
-		for line in ret:
-			if line.startswith('Created'):
-				self.jobId = eval(line[line.index('ID:')+3:])
-				break
-		if (self.jobId == None):
-			print 'Error in creating a new job'
-			print '\n'.join(ret)
-			return False
-		else:
-			return True
-
-	def addTask(self, task):
-		cmd = 'job add %s /scheduler:%s /workdir:%s /stdout:%s %s @%s' % (self.jobId, SCHEDULER, os.path.join(ROOT_DIR, task.dataset), task.stdout, TLC_PATH, task.rspFile)
-		p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
-		ret = p.stdout.read()
-		if 'added' in ret:
-			return True
-		else:
-			return False
-
-	def submit(self):
-		cmd = 'job submit /scheduler:%s /id:%s' % (SCHEDULER, self.jobId)
-		p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
-		ret = p.stdout.read()
-		if 'submitted' in ret:
-			return True
-		else:
-			return False
-
-	def execute(self, jobName):
-		if isinstance(task, Task):
-			if not self.create(task.taskName, 1):
-				return False
-			self.addTask(task)
-		elif isinstance(task, ForkTask):
-			if not self.create(task.taskName, min(self.maxSocket, task.taskCount)):
-				return False
-			for t in task.taskList:
-				self.addTask(t)
-		else:
-			return False
-
-		cnt = 0
-		succ = False
-		while cnt < 3:
-			if self.submit():
-				succ = True
-				break
-			cnt += 1
-		return succ
-
-	def finish(self):
-		cmd = 'job list /scheduler:%s /jobname:%s' % (SCHEDULER, self.jobName)
-		p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
-		ret = p.stdout.read()
-		if 'Running' in ret or 'Queued' in ret:
-			return False
-		else:
-			return True
-"""
 
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description='Using TLC to train neural networks')
@@ -156,7 +84,7 @@ if __name__ == '__main__':
 	if not os.path.exists(args.logfile):
 		print 'Log file "%s" doesn\'t exist' % args.logfile
 		exit()
-	print 'JobTemplate = %s' % str(JOBTEMP)
+	print 'JobTemplate = %s' % str(HDP_JOBTEMP)
 	print 'Socket = %s' % args.socket
 
 	# let's replace Z:\ by HPD_ROOT_DIR
