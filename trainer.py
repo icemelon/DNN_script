@@ -401,6 +401,8 @@ class SharedTrainer(Trainer):
 					fout.write("/inst %s\n" % self.rspTmpl.options['/inst'])
 				fout.write("/cl mcnn { filename=%s iter=0 }\n" % self.bottomNNFile)
 				fout.write("/m %s" % self.bottomBinFile)
+				fout.write("/cacheinst-\n")
+				fout.write("/threads-\n")
 
 			# run TLC to generate binary model
 			command = "%s @%s" % (self.scheduler.tlcpath, genBottomRsp)
@@ -432,9 +434,9 @@ class SharedTrainer(Trainer):
 				if '/instset' in self.rspTmpl.options:
 					fout.write("/instset %s\n" % self.rspTmpl.options['/instset'])
 				fout.write("/m %s\n" % self.bottomBinFile)
+				fout.write("/raw %s" % tmpDataset)
 				fout.write("/cacheinst-\n")
 				fout.write("/threads-\n")
-				fout.write("/raw %s" % tmpDataset)
 			# run TLC to generate binary model
 			command = "%s @%s" % (self.scheduler.tlcpath, genRsp)
 			proc = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE)
@@ -467,6 +469,8 @@ class SharedTrainer(Trainer):
 				fout.write("/c CreateInstances %s\n" % dataset)
 				fout.write("/instancesClass TextInstances\n")
 				fout.write("/instanceWriter BinaryInstanceWriter { ltype=u2 ftype=r4 dense=+ }")
+				fout.write("/cacheinst-\n")
+				fout.write("/threads-\n")
 			# run TLC to generate binary model
 			command = "%s @%s" % (self.scheduler.tlcpath, makebinRsp)
 			proc = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE)
