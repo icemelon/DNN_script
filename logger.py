@@ -71,6 +71,12 @@ class Logger(object):
 				self.headers['TrainedNN'] = data[1]
 			elif data[0] == 'shared':
 				self.headers['Shared'] = eval(data[1])
+			elif data[0] == 'traindataset':
+				self.headers['TrainDataset'] = data[1]
+			elif data[0] == 'testdataset':
+				self.headers['TestDataset'] = data[1]
+			elif data[0] == 'labelfile':
+				self.headers['LabelFile'] = data[1]
 
 	def parseHistory(self, logs):
 		index = 0

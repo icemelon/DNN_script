@@ -64,6 +64,11 @@ class RegularTrainer(Trainer):
 			self.rsp = RspGenerator(rspTmpl, self.idrop, self.hdrop, self.dropEpoch)
 		else:
 			self.rsp = RspGenerator(headers['RspTmplFile'], self.idrop, self.hdrop, self.dropEpoch)
+			# Set specific train and test dataset
+			if 'TrainDataset' in headers:
+				self.rsp.rspTmpl.trainDataset = headers['TrainDataset']
+			if 'TestDataset' in headers:
+				self.rsp.rspTmpl.testDataset = headers['TestDataset']
 
 		# initialize training status
 		self.epoch = 0
@@ -308,6 +313,9 @@ class SharedTrainer(Trainer):
 
 		# load from logger header
 		headers = self.logger.headers
+		assert('TrainedNN' in headers)
+		assert('LabelFile' in headers)
+
 		self.threadName = headers['ThreadName']
 		self.rspTmpl = RspTemplate.parseRspFile(headers['RspTmplFile'])
 		self.sharedLayers = headers['Shared']
@@ -324,16 +332,22 @@ class SharedTrainer(Trainer):
 		self.testDataset = "%s.test.txt" % self.threadName
 		self.testDatasetBin = "%s.test.txt.tlcbin" % self.threadName
 
+		# load label mapping file
+		# mapping from original label to new label
+		self.labelFile = headers['LabelFile']
+		self.labelMap = {}
+		self.dimOutput = 0
+		self.loadLabelMap()
+
 		# generate bottomNN and topNN
 		self.generateNN()
-
 		# update initial nn file in logger's headers
 		self.logger.headers['nn'] = self.topNNFile
+		# return
 
 		# generate train and test dataset
 		self.generateDataset('train')
 		self.generateDataset('test')
-
 		# change train and test dataset in rsp template
 		self.rspTmpl.trainDataset = self.trainDatasetBin
 		self.rspTmpl.testDataset = self.testDatasetBin
@@ -344,11 +358,21 @@ class SharedTrainer(Trainer):
 
 		self.trainer = RegularTrainer(logger, dataset, scheduler, self.rspTmpl)
 
+	def loadLabelMap(self):
+		with open(self.labelFile) as f:
+			for line in f:
+				items = line.strip().split(',')
+				self.labelMap[items[0].strip()] = items[1].strip()
+		self.dimOutput = len(set(self.labelMap.values()))
+
 	def generateNN(self):
 		# parse trained NN
 		fin = open(self.trainedNNFile)
 		nn = NeuralNetwork.parseNN(fin)
+		# bottomNN are shared, topNN is training target
 		bottomNN, topNN = nn.split(self.sharedLayers)
+		# change the output size of topNN
+		topNN.layers[-1].dimOutput = self.dimOutput
 
 		if not os.path.exists(self.topNNFile):
 			print "[SHARED] Creating top nn file"
@@ -372,7 +396,9 @@ class SharedTrainer(Trainer):
 			begin = time.time()
 			genBottomRsp = "%s.bottom.gen.rsp" % self.threadName
 			with open(genBottomRsp, 'w') as fout:
-				fout.write("/c Train %s\n" % self.rspTmpl.trainDataset)
+				fout.write("/c Train %s\n" % self.rspTmpl.testDataset) # usually test dataset is smaller
+				if '/inst' in self.rspTmpl.options:
+					fout.write("/inst %s\n" % self.rspTmpl.options['/inst'])
 				fout.write("/cl mcnn { filename=%s iter=0 }\n" % self.bottomNNFile)
 				fout.write("/m %s" % self.bottomBinFile)
 
@@ -390,12 +416,13 @@ class SharedTrainer(Trainer):
 	# datasetType: train,test
 	def generateDataset(self, datasetType):
 		originDataset = self.rspTmpl.__dict__["%sDataset" % datasetType]
+		tmpDataset = "%s.%s.tmp.txt" % (self.threadName, datasetType)
 		dataset = self.__dict__["%sDataset" % datasetType]
 		datasetBin = self.__dict__["%sDatasetBin" % datasetType]
 
 		if not os.path.exists(dataset):
 			# pass the bottom model to dataset
-			print "[SHARED] Generating %s dataset" % datasetType
+			print "[SHARED] Generating %s tmp dataset" % datasetType
 			begin = time.time()
 			genRsp = "%s.%s.gen.rsp" % (self.threadName, datasetType)
 			with open(genRsp, 'w') as fout:
@@ -407,15 +434,29 @@ class SharedTrainer(Trainer):
 				fout.write("/m %s\n" % self.bottomBinFile)
 				fout.write("/cacheinst-\n")
 				fout.write("/threads-\n")
-				fout.write("/raw %s" % dataset)
+				fout.write("/raw %s" % tmpDataset)
 			# run TLC to generate binary model
 			command = "%s @%s" % (self.scheduler.tlcpath, genRsp)
 			proc = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE)
 			proc.communicate()
 			end = time.time()
-			if not os.path.exists(dataset):
+			if not os.path.exists(tmpDataset):
 				raise Exception("Error in generating %s dataset" % datasetType)
 			print "[SHARED] Finish in %.1f s" % (end-begin)
+
+			# now update to the new label
+			print "[SHARED] Replacing labels"
+			begin = time.time()
+			fout = open(dataset, 'w')
+			with open(tmpDataset) as fin:
+				for line in fin:
+					data = line.strip().split("\t")
+					data[0] = self.labelMap[data[0]]
+					fout.write("%s\n" % "\t".join(data))
+			fout.close()
+			end = time.time()
+			print "[SHARED] Finish in %.1f s" % (end-begin)
+			os.remove(tmpDataset)
 
 		if not os.path.exists(datasetBin):
 			# convert dataset to binary format
@@ -447,3 +488,4 @@ class SharedTrainer(Trainer):
 
 	def train(self):
 		self.trainer.train()
+
