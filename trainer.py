@@ -400,7 +400,7 @@ class SharedTrainer(Trainer):
 				if '/inst' in self.rspTmpl.options:
 					fout.write("/inst %s\n" % self.rspTmpl.options['/inst'])
 				fout.write("/cl mcnn { filename=%s iter=0 }\n" % self.bottomNNFile)
-				fout.write("/m %s" % self.bottomBinFile)
+				fout.write("/m %s\n" % self.bottomBinFile)
 				fout.write("/cacheinst-\n")
 				fout.write("/threads-\n")
 
@@ -434,7 +434,7 @@ class SharedTrainer(Trainer):
 				if '/instset' in self.rspTmpl.options:
 					fout.write("/instset %s\n" % self.rspTmpl.options['/instset'])
 				fout.write("/m %s\n" % self.bottomBinFile)
-				fout.write("/raw %s" % tmpDataset)
+				fout.write("/raw %s\n" % tmpDataset)
 				fout.write("/cacheinst-\n")
 				fout.write("/threads-\n")
 			# run TLC to generate binary model
@@ -468,7 +468,7 @@ class SharedTrainer(Trainer):
 			with open(makebinRsp, 'w') as fout:
 				fout.write("/c CreateInstances %s\n" % dataset)
 				fout.write("/instancesClass TextInstances\n")
-				fout.write("/instanceWriter BinaryInstanceWriter { ltype=u2 ftype=r4 dense=+ }")
+				fout.write("/instanceWriter BinaryInstanceWriter { ltype=u2 ftype=r4 dense=+ }\n")
 				fout.write("/cacheinst-\n")
 				fout.write("/threads-\n")
 			# run TLC to generate binary model
