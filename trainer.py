@@ -399,7 +399,7 @@ class SharedTrainer(Trainer):
 				fout.write("/c Train %s\n" % self.rspTmpl.testDataset) # usually test dataset is smaller
 				if '/inst' in self.rspTmpl.options:
 					fout.write("/inst %s\n" % self.rspTmpl.options['/inst'])
-				fout.write("/cl mcnn { filename=%s iter=0 }\n" % self.bottomNNFile)
+				fout.write("/cl mcnn { filename=%s iter=0 norm={} }\n" % self.bottomNNFile)
 				fout.write("/m %s\n" % self.bottomBinFile)
 				fout.write("/cacheinst-\n")
 				fout.write("/threads-\n")
