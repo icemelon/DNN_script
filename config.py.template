@@ -1,21 +1,27 @@
 
 ### Local Configuration ###
 
-# LOCAL_TLC_PATH = "E:\\haichen\\TLC_2.7.93.0.Single\\TL.exe"
-LOCAL_TLC_PATH = "E:\\haichen\\TLC_MCDNN.Single\\TL.exe"
+# LOCAL_TLC_PATH = "Z:\\TLC_2.7.93.0.Single\\TL.exe"
+DEFAULT_LOCAL_TLC_PATH = "Z:\\TLC_MCDNN.Single\\TL.exe"
 
 ### HDP Configuration ###
 
 # HDP_TLC_PATH = "\\\\msr-hdp\\scratch\\GW0013\\t-haishe\\TLC_2.6.45.0.Single\\TL.exe"
-HDP_TLC_PATH = "\\\\msr-hdp\\scratch\\GW0013\\t-haishe\\TLC_2.7.93.0.Single\\TL.exe"
+# HDP_TLC_PATH = "\\\\msr-hdp\\scratch\\GW0013\\t-haishe\\TLC_2.7.93.0.Single\\TL.exe"
+DEFAULT_HDP_TLC_PATH = "\\\\msr-hdp\\scratch\\GW0013\\t-haishe\\TLC_MCDNN.Single\\TL.exe"
 
-# Root directory for HDP job
-HDP_ROOT_DIR = "\\\\msr-hdp\\scratch\\GW0013\\t-haishe"  
+# Default Root directory for HDP job
+DEFAULT_HDP_ROOT_DIR = "\\\\msr-hdp\\scratch\\GW0013\\t-haishe"  
 
-# GCD Scheduler Head
-HDP_SCHEDULER = 'msr-hdp-gpu'
+# Default GCD Scheduler Head
+DEFAULT_HDP_SCHEDULER = 'msr-hdp-gpu'
 
-# (Job Template, Runtime)
-HDP_JOBTEMP = ('ExpressQ', "1:0:0") # it can run upto 1 day
-# JOBTEMP = ('Cuda65-Nodes', "Infinite") # infinite runtime
-# JOBTEMP = ('DevNodes', "0:4:0") # it can run upto 4 hours
+# Default HDP Job Template
+DEFAULT_HDP_JOBTEMP = 'ExpressQ'
+
+# (Job Template -> Runtime)
+HDP_JOBTEMP_RUNTIME = {
+	'ExpressQ': "1:0:0", # it can run upto 1 day
+	'Cuda65-Nodes': "Infinite", # infinite runtime
+	'DevNodes': "0:4:0", # it can run upto 4 hours
+}
