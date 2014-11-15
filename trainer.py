@@ -39,10 +39,10 @@ class Trainer(object):
 		pass
 
 class RegularTrainer(Trainer):
-	def __init__(self, logger, dataset, scheduler, rspTmpl=None):
+	def __init__(self, logger, dataset, jobManager, rspTmpl=None):
 		self.logger = logger
 		self.dataset = dataset
-		self.scheduler = scheduler
+		self.jobManager = jobManager
 
 		# load from logger header
 		headers = self.logger.headers
@@ -238,7 +238,7 @@ class RegularTrainer(Trainer):
 		while errcnt < 3:				
 			if fork:
 				task = ForkTask(self.rsp, self.dataset, self.threadName, self.epoch, self.lr, self.nn, self.rs)
-				if not self.scheduler.execute(task):
+				if not self.jobManager.execute(task):
 					print 'Error in executing task'
 					return False
 				self.logger.log('[FORKJOB NEW] Epoch=%s RS=[%s]' % (self.epoch, ','.join(str(v) for v in self.rs)))
@@ -250,7 +250,7 @@ class RegularTrainer(Trainer):
 				print 'ForkTask %s has been submitted' % task.taskName
 			else:
 				task = Task(self.rsp, self.dataset, self.threadName, self.epoch, self.lr, self.nn, self.rs, self.subId)
-				if not self.scheduler.execute(task):
+				if not self.jobManager.execute(task):
 					print 'Error in executing task'
 					return False
 				text = '[JOB NEW] Epoch=%s LR=%s Model=%s Stdout=%s' % (task.epoch, task.lr, task.textModel, task.stdout)
@@ -262,7 +262,7 @@ class RegularTrainer(Trainer):
 			# wait for job to finish
 			while (True):
 				time.sleep(60) # check every 1 minute
-				if (self.scheduler.checkFinish(task)):
+				if (self.jobManager.checkFinish(task)):
 					break
 
 			# now parse the result
@@ -306,10 +306,10 @@ class RegularTrainer(Trainer):
 		return succ
 
 class SharedTrainer(Trainer):
-	def __init__(self, logger, dataset, scheduler):
+	def __init__(self, logger, dataset, jobManager):
 		self.logger = logger
 		self.dataset = dataset		
-		self.scheduler = scheduler
+		self.jobManager = jobManager
 
 		# load from logger header
 		headers = self.logger.headers
@@ -356,7 +356,7 @@ class SharedTrainer(Trainer):
 			# no input scale
 			del self.rspTmpl.options['/instset']
 
-		self.trainer = RegularTrainer(logger, dataset, scheduler, self.rspTmpl)
+		self.trainer = RegularTrainer(logger, dataset, jobManager, self.rspTmpl)
 
 	def loadLabelMap(self):
 		with open(self.labelFile) as f:
@@ -405,7 +405,7 @@ class SharedTrainer(Trainer):
 				fout.write("/threads-\n")
 
 			# run TLC to generate binary model
-			command = "%s @%s" % (self.scheduler.tlcpath, genBottomRsp)
+			command = "%s @%s" % (self.jobManager.tlcpath, genBottomRsp)
 			proc = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE)
 			proc.communicate()
 			end = time.time()
@@ -438,7 +438,7 @@ class SharedTrainer(Trainer):
 				fout.write("/cacheinst-\n")
 				fout.write("/threads-\n")
 			# run TLC to generate binary model
-			command = "%s @%s" % (self.scheduler.tlcpath, genRsp)
+			command = "%s @%s" % (self.jobManager.tlcpath, genRsp)
 			proc = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE)
 			proc.communicate()
 			end = time.time()
@@ -472,7 +472,7 @@ class SharedTrainer(Trainer):
 				fout.write("/cacheinst-\n")
 				fout.write("/threads-\n")
 			# run TLC to generate binary model
-			command = "%s @%s" % (self.scheduler.tlcpath, makebinRsp)
+			command = "%s @%s" % (self.jobManager.tlcpath, makebinRsp)
 			proc = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE)
 			proc.communicate()
 			end = time.time()

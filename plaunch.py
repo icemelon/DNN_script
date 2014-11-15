@@ -2,7 +2,7 @@ import os
 import argparse
 import subprocess
 
-import scheduler
+import run
 
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description='Using TLC to train neural networks')
@@ -15,7 +15,7 @@ if __name__ == '__main__':
 	
 	tasks = args.taskfile.readlines()
 	args.taskfile.close()
-	script = os.path.relpath(scheduler.__file__)
+	script = os.path.relpath(run.__file__)
 
 	for task in tasks:
 		task = task.strip()

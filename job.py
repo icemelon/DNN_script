@@ -1,15 +1,10 @@
-import os
 import sys
 import time
 import subprocess
-import argparse
 
 from task import *
-from config import *
-from logger import Logger
-from trainer import *
 
-class Scheduler(object):
+class JobManager(object):
 	def __init__(self, maxSocket, tlcpath):
 		self.maxSocket = maxSocket
 		self.tlcpath = tlcpath
@@ -60,43 +55,3 @@ class Scheduler(object):
 				if t in self.pending or t in self.running:
 					return False
 			return True
-
-
-if __name__ == '__main__':
-	parser = argparse.ArgumentParser(description='Using TLC to train neural networks')
-	parser.add_argument('dataset', help='Working directory that contains dataset')
-	parser.add_argument('logfile', help='Log file (header should be initialed)')
-	parser.add_argument('-s', '--socket', type=int, default=1, help='Available socket number (Default: 1)')
-	parser.add_argument('--tlc', default=LOCAL_TLC_PATH, help='TLC executable path')
-
-	try:
-		args = parser.parse_args()
-	except:
-		exit()
-
-	args.dataset = os.path.abspath(args.dataset)
-	args.logfile = os.path.abspath(args.logfile)
-
-	if not os.path.exists(args.dataset):
-		print 'Working directory "%s" doesn\'t exist' % args.dataset
-		exit()
-	if not os.path.exists(args.logfile):
-		print 'Log file "%s" doesn\'t exist' % args.logfile
-		exit()
-	print 'TLC path = %s' % args.tlc
-	print 'Socket = %s' % args.socket
-
-	scheduler = Scheduler(args.socket, args.tlc)
-
-	# switch to working directory
-	os.chdir(args.dataset)
-
-	logger = Logger(args.logfile)
-	if 'Shared' in logger.headers:
-		trainer = SharedTrainer(logger, args.dataset, scheduler)
-	else:
-		trainer = RegularTrainer(logger, args.dataset, scheduler)
-	print
-	print trainer.summary()
-	
-	trainer.train()
