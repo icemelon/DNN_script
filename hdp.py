@@ -5,7 +5,7 @@ from config import *
 # (Job Template -> Runtime)
 HDP_JOBTEMP_RUNTIME = {
 	'ExpressQ': "1:0:0", # upto 1 day
-	'Cuda65-Nodes': "14：0：0", # upto 2 weeks 
+	'Cuda65-Nodes': "14:0:0", # upto 2 weeks 
 	'DevNodes': "0:4:0", # upto 4 hours
 }
 
