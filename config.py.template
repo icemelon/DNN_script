@@ -18,10 +18,3 @@ DEFAULT_HDP_SCHEDULER = 'msr-hdp-gpu'
 
 # Default HDP Job Template
 DEFAULT_HDP_JOBTEMP = 'ExpressQ'
-
-# (Job Template -> Runtime)
-HDP_JOBTEMP_RUNTIME = {
-	'ExpressQ': "1:0:0", # it can run upto 1 day
-	'Cuda65-Nodes': "Infinite", # infinite runtime
-	'DevNodes': "0:4:0", # it can run upto 4 hours
-}

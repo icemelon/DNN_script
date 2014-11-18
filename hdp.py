@@ -2,6 +2,13 @@ import subprocess
 
 from config import *
 
+# (Job Template -> Runtime)
+HDP_JOBTEMP_RUNTIME = {
+	'ExpressQ': "1:0:0", # upto 1 day
+	'Cuda65-Nodes': "14：0：0", # upto 2 weeks 
+	'DevNodes': "0:4:0", # upto 4 hours
+}
+
 def create(jobTemp, jobName, socket):
 	cmd = 'job new /scheduler:%s /jobtemplate:%s /numsockets:%s-%s /jobname:%s /runtime:%s' \
 		% (DEFAULT_HDP_SCHEDULER, jobTemp, socket, socket, jobName, HDP_JOBTEMP_RUNTIME[jobTemp])
