@@ -285,7 +285,6 @@ class RegularTrainer(Trainer):
 					succ = True
 					self.rs = rs # pick the best random seed
 					self.logger.log('[FORKJOB END] Epoch=%s MeanErr=%s Accuracy=%s Model=%s RS=%s' % (self.epoch, meanErr, accuracy, model, rs))
-					self.logger.log('[UPDATE] RS=%s' % self.rs)
 			else:
 				meanErr = None
 				accuracy = None
