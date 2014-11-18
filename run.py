@@ -36,6 +36,10 @@ def runHDP(args):
 	# let's replace Z:\ by DEFAULT_HDP_ROOT_DIR
 	workdir = os.path.join(DEFAULT_HDP_ROOT_DIR, os.getcwd()[3:])
 	script = os.path.relpath(__file__)
+	# now hdp jobs are node exclusive 
+	nodes = (args['socket'] + 1) / 2
+	args['socket'] = nodes * 2 # each node has 2 GPUs/sockets
+
 	command = "python %s %s %s -s %s --tlc %s --env local" % \
 		(script, args['dataset'], args['logfile'], args['socket'], args['tlc'])
 	stdout = os.path.splitext(args['logfile'])[0] + ".out"
@@ -45,9 +49,10 @@ def runHDP(args):
 	threadName =  os.path.splitext(os.path.basename(args['logfile']))[0]
 	jobName = "%s_%s" % (dataset, threadName)
 
-	print 'JobTemplate: %s, Socket: %s, WorkDir: %s' % (args['jobtemp'], args['socket'], workdir)
+	print 'JobTemplate: %s, Node: %s, Socket: %s, WorkDir: %s' \
+		% (args['jobtemp'], nodes, args['socket'], workdir)
 
-	hdp.execute(args['jobtemp'], jobName, args['socket'], workdir, command, stdout, stderr)
+	hdp.execute(args['jobtemp'], jobName, nodes, workdir, command, stdout, stderr)
 
 	return jobName
 

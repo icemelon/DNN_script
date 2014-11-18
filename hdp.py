@@ -9,9 +9,9 @@ HDP_JOBTEMP_RUNTIME = {
 	'DevNodes': "0:4:0", # upto 4 hours
 }
 
-def create(jobTemp, jobName, socket):
-	cmd = 'job new /scheduler:%s /jobtemplate:%s /numsockets:%s-%s /jobname:%s /runtime:%s' \
-		% (DEFAULT_HDP_SCHEDULER, jobTemp, socket, socket, jobName, HDP_JOBTEMP_RUNTIME[jobTemp])
+def create(jobTemp, jobName, nodes):
+	cmd = 'job new /scheduler:%s /jobtemplate:%s /numnodes:%s-%s /jobname:%s /runtime:%s' \
+		% (DEFAULT_HDP_SCHEDULER, jobTemp, nodes, nodes, jobName, HDP_JOBTEMP_RUNTIME[jobTemp])
 	p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
 	ret = p.stdout.read().split('\n')
 	jobID = None
@@ -24,9 +24,9 @@ def create(jobTemp, jobName, socket):
 		print '\n'.join(ret)
 	return jobID
 
-def addTask(jobID, socket, workdir, command, stdout, stderr):
-	cmd = 'job add %s /scheduler:%s /workdir:%s /numsockets:%s-%s /stdout:%s /stderr:%s %s' \
-		% (jobID, DEFAULT_HDP_SCHEDULER, workdir, socket, socket, stdout, stderr, command)
+def addTask(jobID, nodes, workdir, command, stdout, stderr):
+	cmd = 'job add %s /scheduler:%s /workdir:%s /numnodes:%s-%s /stdout:%s /stderr:%s %s' \
+		% (jobID, DEFAULT_HDP_SCHEDULER, workdir, nodes, nodes, stdout, stderr, command)
 	p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
 	ret = p.stdout.read()
 	if 'added' in ret:
@@ -45,13 +45,13 @@ def submit(jobID):
 		print ret
 		return False
 
-def execute(jobTemp, jobName, socket, workdir, command, stdout, stderr):
-	jobID = create(jobTemp, jobName, socket)
+def execute(jobTemp, jobName, nodes, workdir, command, stdout, stderr):
+	jobID = create(jobTemp, jobName, nodes)
 	if jobID is None:
 		return False
 	print "Created job %s" % jobID
 
-	if not addTask(jobID, socket, workdir, command, stdout, stderr):
+	if not addTask(jobID, nodes, workdir, command, stdout, stderr):
 		return False
 	print "Added task \"%s\" (stdout: %s, stderr: %s)" % (command, stdout, stderr)
 	
