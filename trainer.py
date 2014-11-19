@@ -4,11 +4,10 @@ import re
 import time
 import subprocess
 
-from const import Const
 from logger import Logger
 from task import *
 from rsp import *
-from nn import NeuralNetwork
+from tlc.net import NeuralNetwork
 
 THRESHOLD = 0.1
 DEFAULT_LRED = 0.8
@@ -376,15 +375,15 @@ class SharedTrainer(Trainer):
 		if not os.path.exists(self.topNNFile):
 			print "[SHARED] Creating top nn file"
 			with open(self.topNNFile, 'w') as fout:
-				fout.write(str(topNN))
+				fout.write(topNN.output())
 
 		if not os.path.exists(self.bottomNNFile):
 			# first write bottomNN in text format
 			print "[SHARED] Creating bottom model in text format"
 			begin = time.time()
 			with open(self.bottomNNFile, 'w') as fout:
-				fout.write("%s\n" % str(bottomNN))
-				Const.output(fout, fin)
+				fout.write("%s\n" % bottomNN.output())
+				bottomNN.outputParams(fout, fin)
 			end = time.time()
 			print "[SHARED] Finish in %.1f s" % (end-begin)
 		fin.close() # no longer need it

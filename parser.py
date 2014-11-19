@@ -4,8 +4,7 @@ import sys
 import time
 import argparse
 
-from nn import NeuralNetwork
-from const import Const
+from tlc import net
 
 def isnum(expr):
 	p = re.compile('\d+(\.\d+)?')
@@ -32,7 +31,7 @@ if __name__ == '__main__':
 
 	begin = time.time()
 	log("Starts to parse neural network")
-	nn = NeuralNetwork.parseNN(args.input)
+	net = net.NeuralNetwork.parseNet(args.input)
 	end = time.time()
 	log("Parsing finishes (%.1f s)" % (end-begin))
 	# if args.verify:
@@ -67,18 +66,18 @@ if __name__ == '__main__':
 					op = expr[0]
 					val = eval(expr[1:])
 				mod[tokens[0].strip()] = (val, op)
-			nn.update(layerName, mod)
+			net.update(layerName, mod)
 		# if not nn.verify():
 		# 	exit()
 
 	if args.remove > 0:
-		nn.removeLayers(args.remove)
+		net.removeLayers(args.remove)
 
 	begin = time.time()
 	log("Starts to output neural network")
 	
-	args.output.write("%s\n" % str(nn))
-	Const.output(args.output, args.input)
+	args.output.write("%s\n" % net.output())
+	net.outputParams(args.output, args.input)
 
 	end = time.time()
 	log("Output finishes (%.1f s)" % (end-begin))
