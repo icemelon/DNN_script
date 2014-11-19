@@ -17,7 +17,8 @@ class Param(object):
 		else:
 			item = tokens.pop(separators=";")
 			key, val = item.split('=')
-			self.params[key.strip()] = util.parseValueOrArray(val)
+			print key
+			self.params[key.strip()] = util.parseLargeArray(val)
 
 	def parseParam(self, s):
 		if s in self.params:
