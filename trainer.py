@@ -312,7 +312,7 @@ class SharedTrainer(Trainer):
 		# load from logger header
 		headers = self.logger.headers
 		assert('TrainedNN' in headers)
-		assert('LabelFile' in headers)
+		# assert('LabelFile' in headers)
 
 		self.threadName = headers['ThreadName']
 		self.rspTmpl = RspTemplate.parseRspFile(headers['RspTmplFile'])
@@ -331,11 +331,12 @@ class SharedTrainer(Trainer):
 		self.testDatasetBin = "%s.test.txt.tlcbin" % self.threadName
 
 		# load label mapping file
-		# mapping from original label to new label
-		self.labelFile = headers['LabelFile']
-		self.labelMap = {}
-		self.dimOutput = 0
-		self.loadLabelMap()
+		self.labelMap = None
+		self.dimOutput = -1
+		if 'LabelFile' in headers:
+			# mapping from original label to new label
+			self.labelFile = headers['LabelFile']
+			self.loadLabelMap()
 
 		# generate bottomNN and topNN
 		self.generateNN()
@@ -357,6 +358,7 @@ class SharedTrainer(Trainer):
 		self.trainer = RegularTrainer(logger, dataset, jobManager, self.rspTmpl)
 
 	def loadLabelMap(self):
+		self.labelMap = {}
 		with open(self.labelFile) as f:
 			for line in f:
 				items = line.strip().split(',')
@@ -366,11 +368,12 @@ class SharedTrainer(Trainer):
 	def generateNN(self):
 		# parse trained NN
 		fin = open(self.trainedNNFile)
-		nn = NeuralNetwork.parseNN(fin)
+		nn = NeuralNetwork.parseNet(fin)
 		# bottomNN are shared, topNN is training target
 		bottomNN, topNN = nn.split(self.sharedLayers)
-		# change the output size of topNN
-		topNN.layers[-1].dimOutput = self.dimOutput
+		if self.dimOutput > 0:
+			# change the output size of topNN to new label set
+			topNN.layers[-1].dimOutput = self.dimOutput
 
 		if not os.path.exists(self.topNNFile):
 			print "[SHARED] Creating top nn file"
@@ -445,18 +448,21 @@ class SharedTrainer(Trainer):
 			print "[SHARED] Finish in %.1f s" % (end-begin)
 
 			# now update to the new label
-			print "[SHARED] Replacing labels"
-			begin = time.time()
-			fout = open(dataset, 'w')
-			with open(tmpDataset) as fin:
-				for line in fin:
-					data = line.strip().split("\t")
-					data[0] = self.labelMap[data[0]]
-					fout.write("%s\n" % "\t".join(data))
-			fout.close()
-			end = time.time()
-			print "[SHARED] Finish in %.1f s" % (end-begin)
-			os.remove(tmpDataset)
+			if self.labelMap is not None:
+				print "[SHARED] Replacing labels"
+				begin = time.time()
+				fout = open(dataset, 'w')
+				with open(tmpDataset) as fin:
+					for line in fin:
+						data = line.strip().split("\t")
+						data[0] = self.labelMap[data[0]]
+						fout.write("%s\n" % "\t".join(data))
+				fout.close()
+				end = time.time()
+				print "[SHARED] Finish in %.1f s" % (end-begin)
+				os.remove(tmpDataset)
+			else:
+				os.rename(tmpDataset, dataset)
 
 		if not os.path.exists(datasetBin):
 			# convert dataset to binary format

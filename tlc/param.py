@@ -50,8 +50,6 @@ class Param(object):
 			if type(val) is list:
 				fout.write("const %s = %s;\n" % (key, val))
 
-		print self.params
-
 		if fin is not None:
 			while True:
 				line = fin.readline()

@@ -13,9 +13,9 @@ OPS = {
 }
 
 class NeuralNetwork(object):
-	def __init__(self):
+	def __init__(self, params=None):
 		self.layers = []
-		self.params = Param()
+		self.params = Param() if params is None else params
 	
 	def output(self):
 		return '\n'.join(l.output() for l in self.layers)
@@ -62,11 +62,11 @@ class NeuralNetwork(object):
 	# return: (bottom NN, top NN)
 	def split(self, num):
 		# init topNN and its input
-		topNN = NeuralNetwork()
+		topNN = NeuralNetwork(self.params)
 		dimInput = self.layers[num - 1].dimOutput
 		if type(dimInput) is list:
 			dimInput = reduce(lambda x,y: x*y, dimInput)
-		topInputLayer = InputLayer("vector", dimInput)
+		topInputLayer = InputLayer("vector", dimInput, self.params)
 		topNN.layers.append(topInputLayer)
 
 		# add the rest of top layers into topNN
@@ -84,7 +84,7 @@ class NeuralNetwork(object):
 		# change last layer of bottomNN
 		layer = self.layers.pop()
 		attrs = {"Biases": layer.biases}
-		newLayer = OutputLayer(layer.name, layer.dimOutput, layer.outputFunc, layer.bundle, attrs)
+		newLayer = OutputLayer(layer.name, layer.dimOutput, self.params, layer.outputFunc, layer.bundle, attrs)
 		self.layers.append(newLayer)
 
 		return (self, topNN)
