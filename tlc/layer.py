@@ -89,7 +89,7 @@ class HiddenLayer(Layer):
 		if self.biases is not None:
 			self.params.remove(self.biases)
 			self.biases = None
-		self.bundle.removeParam()
+		self.bundle.removeParams()
 
 	def output(self):
 		s = "hidden %s %s %s {\n" % (self.name, self.dimOutput_to_str(), self.outputFunc)
@@ -109,7 +109,7 @@ class OutputLayer(Layer):
 		if self.biases is not None:
 			self.params.remove(self.biases)
 			self.biases = None
-		self.bundle.removeParam()
+		self.bundle.removeParams()
 
 	def output(self):
 		s = "output %s %s %s {\n" % (self.name, self.dimOutput_to_str(), self.outputFunc)
