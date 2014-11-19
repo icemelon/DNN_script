@@ -139,7 +139,7 @@ class NeuralNetwork(object):
 					layer.geo.dimKernel[0] = layer.geo.dimInput[0]
 
 	@staticmethod
-	def parseNet(fin):
+	def parseNet(fin, loadParams=False):
 		tokens = FileTokenParser(fin)
 
 		net = NeuralNetwork()
@@ -153,7 +153,7 @@ class NeuralNetwork(object):
 				layer = Layer.parse(tokens, net)
 				net.layers.append(layer)
 				# print layer
-				if type(layer) is OutputLayer:
+				if type(layer) is OutputLayer and not loadParams:
 					# only parse to output layer
 					break
 		return net

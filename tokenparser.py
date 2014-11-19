@@ -163,17 +163,19 @@ class FileTokenParser(TokenParser):
 			
 		index = -1
 		sep = None
-		for c in separators:
-			# print c
-			i = self._content.find(c)
-			# corner case: a={}
-			# we look for second occurrence
-			if c == '{' and i > 0 and self._content[i-1] == '=':
-				i = self._content[i+1:].find('{')
-			if i < 0: continue
-			if index < 0 or i < index:
-				index = i
-				sep = c
+		while index < 0 and not self.fileEnds:
+			for c in separators:
+				# print c
+				i = self._content.find(c)
+				# corner case: a={}
+				# we look for second occurrence
+				if c == '{' and i > 0 and self._content[i-1] == '=':
+					i = self._content[i+1:].find('{')
+				if i < 0: continue
+				if index < 0 or i < index:
+					index = i
+					sep = c
+			if index < 0: self.readline()
 		# last token
 		if index < 0:
 			index = len(self._content)

@@ -21,3 +21,10 @@ def parseValueOrArray(s):
 		return ret
 	else:
 		return parseValue(s)
+
+def parseLargeArray(s):
+	s = s.strip(' []')
+	ret = []
+	for data in s.split(','):
+		ret.append(eval(data))
+	return ret

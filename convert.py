@@ -79,13 +79,39 @@ def convertLayer(tlcLayer):
 
 	return ret
 
+def loadBlobs(tlcNet, caffeNet):
+	# copy all parameters from tlc to caffe
+	params = tlcNet.params
+	for i in range(1, len(tlcNet.layers)):
+		tlcLayer = tlcNet.layers[i]
+		caffeLayer = caffeNet.layers[i - 1] # because don't have input layer
+		bundle = tlcLayer.bundle
+		if type(bundle) is ConvolveBundle:
+			pass
+		elif type(bundle) is FullBundle:
+			weights = params.params[bundle.weights]
+			weightBlob = caffeLayer.blobs.add()
+			weightBlob.data.extend(weights)
+			weightBlob.num = 1
+			weightBlob.channels = 1
+			weightBlob.height = tlcLayer.dimOutput
+			weightBlob.width = len(weights) / weightBlob.height
+
+			biases = params.params[tlcLayer.baises]
+			biasBlob = caffeLayer.blobs.add()
+			biasBlob.data.extend(biases)
+			biasBlob.num = 1
+			biasBlob.channels = 1
+			biases.height = tlcLayer.dimOutput
+
 if __name__ == '__main__':
 	if len(sys.argv) < 2:
 		print "%s TLCNetFile" % sys.argv[0]
 		exit()
 
 	fin = open(sys.argv[1])
-	tlcNet = NeuralNetwork.parseNet(fin)
+	tlcNet = NeuralNetwork.parseNet(fin, True)
 	# print tlcNet.output()
 	caffeNet = convert(tlcNet)
+	loadBlobs(tlcNet, caffeNet)
 	print caffeNet
