@@ -1,6 +1,6 @@
 import re
 
-from const import Const
+from util import parseValueOrArray
 
 def parseLine(line):
 	line = line.strip()
@@ -60,7 +60,7 @@ class Logger(object):
 			elif data[0] == 'lred':
 				self.headers['lred'] = eval(data[1])
 			elif data[0] == 'rs':
-				self.headers['rs'] = Const.parseValueOrArray(data[1])
+				self.headers['rs'] = parseValueOrArray(data[1])
 			elif data[0] == 'idrop':
 				self.headers['idrop'] = eval(data[1])
 			elif data[0] == 'hdrop':

@@ -1,8 +1,8 @@
 import time
 import operator
 
-from const import Const
 from layer import *
+from param import Param
 from tokenparser import FileTokenParser
 
 OPS = {
@@ -15,16 +15,13 @@ OPS = {
 class NeuralNetwork(object):
 	def __init__(self):
 		self.layers = []
-
-	def parse(self, content):
-		if content.startswith('const'):
-			Const.parseConst(content)
-		else:
-			layer = Layer.parse(content, self.layers)
-			self.layers.append(layer)
+		self.params = Param()
 	
-	def __str__(self):
-		return '\n'.join(str(l) for l in self.layers)
+	def output(self):
+		return '\n'.join(l.output() for l in self.layers)
+
+	def outputParams(self, fout, fin=None):
+		self.params.outputParams(fout, fin)
 
 	def findLayerByName(self, name):
 		ret = None
@@ -36,8 +33,8 @@ class NeuralNetwork(object):
 
 	def verify(self):
 		# first check if there is any dangling constant
-		for key in Const.values:
-			val = Const.values[key]
+		for key in self.params.values:
+			val = self.params.values[key]
 			if val is None:
 				print "Error: find dangling constant: %s" % key
 				return False
@@ -72,17 +69,13 @@ class NeuralNetwork(object):
 		topInputLayer = InputLayer("vector", dimInput)
 		topNN.layers.append(topInputLayer)
 
-		# change the input of first hidden layer in topNN
-		layer = self.layers[num]
-		layer.bundle.input = topInputLayer
-		layer.removeConst()
-		topNN.layers.append(layer)
-
 		# add the rest of top layers into topNN
-		for i in range(num+1, len(self.layers)):
+		for i in range(num, len(self.layers)):
 			layer = self.layers[i]
-			layer.removeConst()
+			layer.removeParams()
 			topNN.layers.append(layer)
+		# change the input of first hidden layer in topNN
+		topNN.layers[1].bundle.input = topInputLayer
 
 		# remove top layers from bottomNN
 		for _ in range(len(self.layers) - num):
@@ -100,7 +93,7 @@ class NeuralNetwork(object):
 	def removeLayers(self, num):
 		for _ in range(num):
 			layer = self.layers.pop()
-			layer.removeConst()
+			layer.removeParams()
 		# change last layer into output layer
 		layer = self.layers.pop()
 		attrs = {"Biases": layer.biases}
@@ -146,21 +139,21 @@ class NeuralNetwork(object):
 					layer.geo.dimKernel[0] = layer.geo.dimInput[0]
 
 	@staticmethod
-	def parseNN(fin):
+	def parseNet(fin):
 		tokens = FileTokenParser(fin)
 
-		nn = NeuralNetwork()
+		net = NeuralNetwork()
 		while True:
 			token = tokens.peek()
 			if token == None:
 				break
 			elif token == 'const':
-				Const.parse(tokens)
+				net.params.parseConst(tokens)
 			else:
-				layer = Layer.parse(tokens, nn)
-				nn.layers.append(layer)
+				layer = Layer.parse(tokens, net)
+				net.layers.append(layer)
 				# print layer
 				if type(layer) is OutputLayer:
 					# only parse to output layer
 					break
-		return nn
+		return net
