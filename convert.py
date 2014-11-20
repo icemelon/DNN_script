@@ -1,4 +1,6 @@
+import os
 import sys
+import time
 
 from tlc.net import NeuralNetwork
 from tlc.bundle import *
@@ -57,6 +59,8 @@ def convertLayer(tlcLayer):
 		conv.kernel_size = bundle.geo.dimKernel[-1]
 		if bundle.geo.stride is not None:
 			conv.stride = bundle.geo.stride[-1]
+		else:
+			conv.stride = 1
 		if type(bundle.mapCount) is list:
 			conv.num_output = bundle.mapCount[0]
 		else:
@@ -90,10 +94,34 @@ def convertBlobs(tlcNet, caffeNet):
 	params = tlcNet.params
 	for i in range(1, len(tlcNet.layers)):
 		tlcLayer = tlcNet.layers[i]
-		caffeLayer = caffeNet.layers[i - 1] # because don't have input layer
+		for l in caffeNet.layers:
+			if l.name == tlcLayer.name:
+				caffeLayer = l
 		bundle = tlcLayer.bundle
 		if type(bundle) is ConvolveBundle:
-			pass
+			weights = params.params[bundle.weights]
+			weightBlob = caffeLayer.blobs.add()
+			weightBlob.num = caffeLayer.convolution_param.num_output
+			if len(bundle.geo.dimKernel) == 2:
+				weightBlob.channels = 1
+			else:
+				weightBlob.channels = bundle.geo.dimKernel[0]
+			weightBlob.height = caffeLayer.convolution_param.kernel_size
+			weightBlob.width = caffeLayer.convolution_param.kernel_size
+
+			biasBlob = caffeLayer.blobs.add()
+			biasBlob.num = 1
+			biasBlob.channels = 1
+			biasBlob.height = 1
+			biasBlob.width = weightBlob.num
+
+			kernel_num = weightBlob.channels * weightBlob.height * weightBlob.width
+			index = 0
+			for i in range(weightBlob.num):
+				weightBlob.data.extend(weights[index:index+kernel_num])
+				biasBlob.data.append(weights[index+kernel_num])
+				index += kernel_num + 1
+
 		elif type(bundle) is FullBundle:
 			weights = params.params[bundle.weights]
 			weightBlob = caffeLayer.blobs.add()
@@ -108,24 +136,31 @@ def convertBlobs(tlcNet, caffeNet):
 			biasBlob.data.extend(biases)
 			biasBlob.num = 1
 			biasBlob.channels = 1
-			biasBlob.height = tlcLayer.dimOutput
+			biasBlob.height = 1
+			biasBlob.width = tlcLayer.dimOutput
 
 if __name__ == '__main__':
 	if len(sys.argv) < 2:
 		print "%s TLCNetFile" % sys.argv[0]
 		exit()
 
-	fin = open(sys.argv[1])
-	import time
-	# exit()
+	filename = sys.argv[1]
+	prefix = os.path.splitext(os.path.basename(filename))[0]
 
+	fin = open(filename)
+	print "[%s] Start loading TLC model" % time.asctime()
 	tlcNet = NeuralNetwork.parseNet(fin)
-	print tlcNet.output()
-	caffeNet = convert(tlcNet)
-	print caffeNet
-	print time.asctime()
 	tlcNet.params.loadBlobs(fin)
-	print time.asctime()
-	# print tlcNet.output()
+	print "[%s] Loading finished" % time.asctime()
+	
+	protofile = "%s.prototxt" % prefix
+	caffeNet = convert(tlcNet)
+	with open(protofile, 'w') as f:
+		f.write(str(caffeNet))
+	print "[%s] Proto file: %s" % (time.asctime(), protofile)
+	
+	binaryfile = "%s.caffemodel" % prefix
 	convertBlobs(tlcNet, caffeNet)
-	print caffeNet
+	with open(binaryfile, 'wb') as f:
+		f.write(caffeNet.SerializeToString())
+	print "[%s] Binary model file: %s" % (time.asctime(), binaryfile)
