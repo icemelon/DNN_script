@@ -15,8 +15,10 @@ def convert(tlcNet):
 	inputLayer = tlcNet.layers[0]
 	caffeNet.input.append(inputLayer.name)
 	# print caffeNet.input
-	caffeNet.input_dim.extend(inputLayer.dimOutput)
-
+	if type(inputLayer.dimOutput) is list:
+		caffeNet.input_dim.extend(inputLayer.dimOutput)
+	else:
+		caffeNet.input_dim.append(inputLayer.dimOutput)
 	# copy basic info from tlc to caffe
 	for i in range(1, len(tlcNet.layers)):
 		tlcLayer = tlcNet.layers[i]
@@ -53,8 +55,12 @@ def convertLayer(tlcLayer):
 		caffeLayer.type = LayerParameter.CONVOLUTION
 		conv = caffeLayer.convolution_param
 		conv.kernel_size = bundle.geo.dimKernel[-1]
-		conv.stride = bundle.geo.stride[-1]
-		conv.num_output = bundle.mapCount
+		if bundle.geo.stride is not None:
+			conv.stride = bundle.geo.stride[-1]
+		if type(bundle.mapCount) is list:
+			conv.num_output = bundle.mapCount[0]
+		else:
+			conv.num_output = bundle.mapCount
 		if bundle.geo.padding[-1]:
 			conv.pad = (conv.kernel_size - 1) / 2
 		# add computation layer
@@ -79,7 +85,7 @@ def convertLayer(tlcLayer):
 
 	return ret
 
-def loadBlobs(tlcNet, caffeNet):
+def convertBlobs(tlcNet, caffeNet):
 	# copy all parameters from tlc to caffe
 	params = tlcNet.params
 	for i in range(1, len(tlcNet.layers)):
@@ -97,12 +103,12 @@ def loadBlobs(tlcNet, caffeNet):
 			weightBlob.height = tlcLayer.dimOutput
 			weightBlob.width = len(weights) / weightBlob.height
 
-			biases = params.params[tlcLayer.baises]
+			biases = params.params[tlcLayer.biases]
 			biasBlob = caffeLayer.blobs.add()
 			biasBlob.data.extend(biases)
 			biasBlob.num = 1
 			biasBlob.channels = 1
-			biases.height = tlcLayer.dimOutput
+			biasBlob.height = tlcLayer.dimOutput
 
 if __name__ == '__main__':
 	if len(sys.argv) < 2:
@@ -110,8 +116,16 @@ if __name__ == '__main__':
 		exit()
 
 	fin = open(sys.argv[1])
-	tlcNet = NeuralNetwork.parseNet(fin, True)
-	# print tlcNet.output()
+	import time
+	# exit()
+
+	tlcNet = NeuralNetwork.parseNet(fin)
+	print tlcNet.output()
 	caffeNet = convert(tlcNet)
-	loadBlobs(tlcNet, caffeNet)
+	print caffeNet
+	print time.asctime()
+	tlcNet.params.loadBlobs(fin)
+	print time.asctime()
+	# print tlcNet.output()
+	convertBlobs(tlcNet, caffeNet)
 	print caffeNet

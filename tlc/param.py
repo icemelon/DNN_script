@@ -15,10 +15,27 @@ class Param(object):
 				key, val = item.split('=')
 				self.params[key.strip()] = util.parseValueOrArray(val)
 		else:
-			item = tokens.pop(separators=";")
-			key, val = item.split('=')
-			print key
+			key = tokens.pop()
+			tokens.pop() # skip '='
+			val = tokens.pop(separators=';')
 			self.params[key.strip()] = util.parseLargeArray(val)
+
+	def loadBlobs(self, fin):
+		var = None
+		while True:
+			line = fin.readline()
+			if line is None or len(line) == 0: break
+			if '//' in line: line = line[:line.index('//')]
+			# print line.strip()
+			if var is not None:
+				if ']' in line:
+					var = None
+				else:
+					self.params[var].extend([eval(x) for x in line.split(',') if x.strip()])
+			elif line.startswith("const"):
+				tokens = line.split()
+				var = tokens[1]
+				self.params[var] = []
 
 	def parseParam(self, s):
 		if s in self.params:
