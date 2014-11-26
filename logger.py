@@ -77,6 +77,8 @@ class Logger(object):
 				self.headers['TestDataset'] = data[1]
 			elif data[0] == 'labelfile':
 				self.headers['LabelFile'] = data[1]
+			elif data[0] == 'dimoutput':
+				self.headers['DimOutput'] = eval(data[1])
 
 	def parseHistory(self, logs):
 		index = 0

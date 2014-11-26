@@ -347,6 +347,8 @@ class SharedTrainer(Trainer):
 			# mapping from original label to new label
 			self.labelFile = headers['LabelFile']
 			self.loadLabelMap()
+		if 'DimOutput' in headers:
+			self.dimOutput = headers['DimOutput']
 
 		# generate bottomNN and topNN
 		self.generateNN()
@@ -364,6 +366,8 @@ class SharedTrainer(Trainer):
 		if '/instset' in self.rspTmpl.options:
 			# no input scale
 			del self.rspTmpl.options['/instset']
+		if self.rspTmpl.classifier['name'] == 'PatchingMultiClass':
+			self.rspTmpl.classifier = self.rspTmpl.classifier['options']['bp']
 
 		self.trainer = RegularTrainer(logger, dataset, jobManager, self.rspTmpl)
 
@@ -407,10 +411,13 @@ class SharedTrainer(Trainer):
 			begin = time.time()
 			genBottomRsp = "%s.bottom.gen.rsp" % self.threadName
 			with open(genBottomRsp, 'w') as fout:
-				fout.write("/c Train %s\n" % self.rspTmpl.testDataset) # usually test dataset is smaller
+				fout.write("/c Train %s\n" % self.originTestDataset) # usually test dataset is smaller
 				if '/inst' in self.rspTmpl.options:
 					fout.write("/inst %s\n" % self.rspTmpl.options['/inst'])
-				fout.write("/cl mcnn { filename=%s iter=0 norm={} }\n" % self.bottomNNFile)
+				if self.rspTmpl.classifier['name'] == 'PatchingMultiClass':
+					fout.write("/cl PatchingMultiClass { bp=mcnn{ filename=%s iter=0 norm={} } inheight=256 inwidth=256 outheight=224 outwidth=224 }\n" % self.bottomNNFile)
+				else:
+					fout.write("/cl mcnn { filename=%s iter=0 norm={} }\n" % self.bottomNNFile)
 				fout.write("/m %s\n" % self.bottomBinFile)
 				fout.write("/cacheinst-\n")
 				fout.write("/threads-\n")
