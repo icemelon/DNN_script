@@ -97,7 +97,7 @@ class NeuralNetwork(object):
 		# change last layer into output layer
 		layer = self.layers.pop()
 		attrs = {"Biases": layer.biases}
-		newLayer = OutputLayer(layer.name, layer.dimOutput, layer.outputFunc, layer.bundle, attrs)
+		newLayer = OutputLayer(layer.name, layer.dimOutput, self.params, layer.outputFunc, layer.bundle, attrs)
 		self.layers.append(newLayer)
 
 	def update(self, layerName, mod):
