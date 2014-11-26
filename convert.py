@@ -1,9 +1,6 @@
 import os
 import sys
-<<<<<<< HEAD
 import math
-=======
->>>>>>> e11365f88596bfbca86cf709159e5e1cfb103835
 import time
 
 from tlc.net import NeuralNetwork
@@ -21,7 +18,6 @@ def convert(tlcNet):
 	inputLayer = tlcNet.layers[0]
 	caffeNet.input.append(inputLayer.name)
 	# print caffeNet.input
-<<<<<<< HEAD
 	caffeNet.input_dim.append(1) # no crops for input image
 	if type(inputLayer.dimOutput) is list:
 		caffeNet.input_dim.extend(inputLayer.dimOutput)
@@ -30,12 +26,7 @@ def convert(tlcNet):
 		caffeNet.input_dim.append(3)
 		caffeNet.input_dim.append(imageSize)
 		caffeNet.input_dim.append(imageSize)
-=======
-	if type(inputLayer.dimOutput) is list:
-		caffeNet.input_dim.extend(inputLayer.dimOutput)
-	else:
-		caffeNet.input_dim.append(inputLayer.dimOutput)
->>>>>>> e11365f88596bfbca86cf709159e5e1cfb103835
+
 	# copy basic info from tlc to caffe
 	for i in range(1, len(tlcNet.layers)):
 		tlcLayer = tlcNet.layers[i]
@@ -80,11 +71,7 @@ def convertLayer(tlcLayer):
 			conv.num_output = bundle.mapCount[0]
 		else:
 			conv.num_output = bundle.mapCount
-<<<<<<< HEAD
 		if bundle.geo.padding is not None and bundle.geo.padding[-1]:
-=======
-		if bundle.geo.padding[-1]:
->>>>>>> e11365f88596bfbca86cf709159e5e1cfb103835
 			conv.pad = (conv.kernel_size - 1) / 2
 		# add computation layer
 		computLayer = LayerParameter()
@@ -105,11 +92,8 @@ def convertLayer(tlcLayer):
 		pooling_param.pool = PoolingParameter.MAX
 		pooling_param.kernel_size = bundle.geo.dimKernel[-1]
 		pooling_param.stride = bundle.geo.stride[-1]
-<<<<<<< HEAD
 		if bundle.geo.padding is not None and bundle.geo.padding[-1]:
 			pooling_param.pad = (pooling_param.kernel_size - 1) / 2
-=======
->>>>>>> e11365f88596bfbca86cf709159e5e1cfb103835
 
 	return ret
 
