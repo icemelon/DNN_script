@@ -33,8 +33,7 @@ def runHDP(args):
 	if args['tlc'] is None:
 		args['tlc'] = DEFAULT_HDP_TLC_PATH
 
-	# let's replace Z:\ by DEFAULT_HDP_ROOT_DIR
-	workdir = os.path.join(DEFAULT_HDP_ROOT_DIR, os.getcwd()[3:])
+	workdir = DEFAULT_HDP_ROOT_DIR
 	script = os.path.relpath(__file__)
 	# now hdp jobs are node exclusive 
 	nodes = (args['socket'] + 1) / 2
