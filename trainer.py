@@ -319,6 +319,16 @@ class SharedTrainer(Trainer):
 		self.sharedLayers = headers['Shared']
 		self.trainedNNFile = headers['TrainedNN']
 
+		# origin train and test dataset
+		if 'TrainDataset' in headers:
+			self.originTrainDataset = headers['TrainDataset']
+		else:
+			self.originTrainDataset = self.rspTmpl.trainDataset
+		if 'TestDataset' in headers:
+			self.originTestDataset = headers['TestDataset']
+		else:
+			self.originTestDataset = self.rspTmpl.testDataset
+
 		# bottom and top NN files
 		self.bottomNNFile = "%s.bottom.nn" % self.threadName
 		self.bottomBinFile = "%s.bottom.bin" % self.threadName
@@ -418,7 +428,7 @@ class SharedTrainer(Trainer):
 
 	# datasetType: train,test
 	def generateDataset(self, datasetType):
-		originDataset = self.rspTmpl.__dict__["%sDataset" % datasetType]
+		originDataset = self.__dict__["origin%sDataset" % datasetType.capitalize()]
 		tmpDataset = "%s.%s.tmp.txt" % (self.threadName, datasetType)
 		dataset = self.__dict__["%sDataset" % datasetType]
 		datasetBin = self.__dict__["%sDatasetBin" % datasetType]
