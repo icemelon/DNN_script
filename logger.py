@@ -56,7 +56,7 @@ class Logger(object):
 			elif data[0] == 'lr':
 				self.headers['lr'] = eval(data[1])
 			elif data[0] == 'nn':
-				self.headers['nn'] = data[1]
+				self.headers['nn'] = os.path.abspath(data[1])
 			elif data[0] == 'lred':
 				self.headers['lred'] = eval(data[1])
 			elif data[0] == 'rs':
@@ -68,15 +68,15 @@ class Logger(object):
 			elif data[0] == 'dropepoch':
 				self.headers['DropEpoch'] = eval(data[1])
 			elif data[0] == 'trainednn':
-				self.headers['TrainedNN'] = data[1]
+				self.headers['TrainedNN'] =  os.path.abspath(data[1])
 			elif data[0] == 'shared':
 				self.headers['Shared'] = eval(data[1])
 			elif data[0] == 'traindataset':
-				self.headers['TrainDataset'] = data[1]
+				self.headers['TrainDataset'] =  os.path.abspath(data[1])
 			elif data[0] == 'testdataset':
-				self.headers['TestDataset'] = data[1]
+				self.headers['TestDataset'] =  os.path.abspath(data[1])
 			elif data[0] == 'labelfile':
-				self.headers['LabelFile'] = data[1]
+				self.headers['LabelFile'] =  os.path.abspath(data[1])
 			elif data[0] == 'dimoutput':
 				self.headers['DimOutput'] = eval(data[1])
 
