@@ -17,9 +17,10 @@ def runLocal(args):
 	print 'Socket: %s' % args.socket
 
 	jobManager = JobManager(args.socket, args.tlc)
-	# switch to working directory
-	os.chdir(args.dataset)
 	logger = Logger(args.logfile)
+
+	# switch to dataset directory
+	os.chdir(args.dataset)
 
 	if 'Shared' in logger.headers:
 		trainer = SharedTrainer(logger, args.dataset, jobManager)

@@ -52,7 +52,7 @@ class Logger(object):
 				self.headers['ThreadName'] = data[1]
 			elif data[0] == 'rsptemplate':
 				# load template rsp file
-				self.headers['RspTmplFile'] = data[1]
+				self.headers['RspTmplFile'] = os.path.abspath(data[1])
 			elif data[0] == 'lr':
 				self.headers['lr'] = eval(data[1])
 			elif data[0] == 'nn':
