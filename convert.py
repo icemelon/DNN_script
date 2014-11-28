@@ -86,6 +86,7 @@ def convertLayer(tlcLayer):
 		lrn_param.local_size = bundle.geo.dimKernel[0]
 		lrn_param.alpha = bundle.alpha
 		lrn_param.beta = bundle.beta
+		lrn_param.k = 2.0
 	elif type(bundle) is MaxPoolBundle:
 		caffeLayer.type = LayerParameter.POOLING
 		pooling_param = caffeLayer.pooling_param
