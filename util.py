@@ -1,4 +1,5 @@
 import re
+import struct
 
 def parseValue(s):
 	s = s.strip()
@@ -28,3 +29,6 @@ def parseLargeArray(s):
 	for data in s.split(','):
 		ret.append(eval(data))
 	return ret
+
+def parseHex(s):
+	return struct.unpack('<f', s.decode('hex'))[0]

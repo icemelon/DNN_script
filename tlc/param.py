@@ -22,20 +22,34 @@ class Param(object):
 
 	def loadBlobs(self, fin):
 		var = None
+		hexFormat = False
 		while True:
 			line = fin.readline()
 			if line is None or len(line) == 0: break
-			if '//' in line: line = line[:line.index('//')]
-			# print line.strip()
-			if var is not None:
-				if ']' in line:
-					var = None
-				else:
-					self.params[var].extend([eval(x) for x in line.split(',') if x.strip()])
+			line = line.strip()
+			if len(line) == 0:
+				continue
 			elif line.startswith("const"):
 				tokens = line.split()
 				var = tokens[1]
 				self.params[var] = []
+				continue
+			elif line.startswith('floats_from_bytes'):
+				hexFormat = True
+				continue
+			elif ']' in line:
+				var = None
+				hexFormat = False
+				continue
+
+			# now starts to parsing values
+			if '//' in line: line = line[:line.index('//')]
+			# print line
+			if hexFormat:
+				if ')' in line: continue
+				self.params[var].extend([util.parseHex(s) for s in line.split(' ')])
+			else:
+				self.params[var].extend([eval(s) for s in line.split(',') if s.strip()])
 
 	def parseParam(self, s):
 		if s in self.params:
