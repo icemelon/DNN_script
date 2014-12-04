@@ -1,3 +1,5 @@
+import re
+
 import util
 
 class Param(object):
@@ -44,7 +46,6 @@ class Param(object):
 
 			# now starts to parsing values
 			if '//' in line: line = line[:line.index('//')]
-			# print line
 			if hexFormat:
 				if ')' in line: continue
 				self.params[var].extend([util.parseHex(s) for s in line.split(' ')])
@@ -52,14 +53,42 @@ class Param(object):
 				self.params[var].extend([eval(s) for s in line.split(',') if s.strip()])
 
 	def parseParam(self, s):
+		s = s.strip()
 		if s in self.params:
 			return self.params[s]
 		try:
-			val = util.parseValueOrArray(s)
-		except Exception:
+			val = self.parseValueOrArray(s)
+		except RuntimeError:
 			val = s.strip() # return symbol only
 			self.params[val] = None # put a holder in the params lookup
 		return val
+
+	def parseValue(self, s):
+		s = s.strip()
+		val = None
+		if s == 'true':
+			val = True
+		elif s == 'false':
+			val = False
+		elif s in self.params and self.params[s] is not None:
+			val = self.params[s]
+		else:
+			p = re.compile('^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$')
+			if p.match(s):
+				val = eval(s)
+		if val is None:
+			raise RuntimeError("%s is not a primitive value" % s)
+		return val
+
+	def parseValueOrArray(self, s):
+		s = s.strip(' []')
+		if ',' in s:
+			ret = []
+			for data in s.split(','):
+				ret.append(self.parseValue(data))
+			return ret
+		else:
+			return self.parseValue(s)
 
 	def remove(self, var):
 		if var in self.params:

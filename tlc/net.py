@@ -31,6 +31,22 @@ class NeuralNetwork(object):
 				break
 		return ret
 
+	def stats(self):
+		name = []
+		comput = []
+		params = []
+		output = []
+		for l in self.layers:
+			name.append(l.name)
+			comput.append(l.numComput())
+			params.append(l.numParam())
+			output.append(l.numOutput())
+
+		print "%s\tTotal" % '\t'.join(name)
+		print "%s\t%s" % ('\t'.join([str(x) for x in comput]), sum(comput))
+		print "%s\t%s" % ('\t'.join([str(x) for x in params]), sum(params))
+		print '\t'.join([str(x) for x in output])
+
 	def verify(self):
 		# first check if there is any dangling constant
 		for key in self.params.values:
@@ -157,3 +173,4 @@ class NeuralNetwork(object):
 					# only parse to output layer
 					break
 		return net
+

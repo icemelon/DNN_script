@@ -14,13 +14,26 @@ class Layer(object):
 	def removeParams(self):
 		pass
 
+	# output to string
 	def output(self):
 		pass
 
-	def computeDimOutput(self):
-		return self.dimOutput
+	def numParam(self):
+		pass
 
-	def dimOutput_to_str(self):
+	def numComput(self):
+		pass
+
+	def numOutput(self):
+		if type(self.dimOutput) is list:
+			return reduce(lambda x,y: x*y, self.dimOutput)
+		else:
+			return self.dimOutput
+
+	# def computeDimOutput(self):
+	# 	return self.dimOutput
+
+	def _dimOutput_to_str(self):
 		if type(self.dimOutput) is list:
 			return str(self.dimOutput)
 		else:
@@ -72,8 +85,14 @@ class InputLayer(Layer):
 	def __init__(self, name, dimOutput, params):
 		super(InputLayer, self).__init__(name, dimOutput, params)
 
+	def numParam(self):
+		return 0
+
+	def numComput(self):
+		return 0
+
 	def output(self):
-		return 'input %s %s;' % (self.name, self.dimOutput_to_str())
+		return 'input %s %s;' % (self.name, self._dimOutput_to_str())
 
 class HiddenLayer(Layer):
 	def __init__(self, name, dimOutput, params, outputFunc, bundle, attrs):
@@ -91,8 +110,34 @@ class HiddenLayer(Layer):
 			self.biases = None
 		self.bundle.removeParams()
 
+	def numParam(self):
+		if type(self.bundle) is FullBundle:
+			return self.numOutput() * (self.bundle.input.numOutput() + 1)
+		elif type(self.bundle) is ConvolveBundle:
+			# print self.bundle.sharing
+			sharing = True
+			if self.bundle.sharing is not None:
+				sharing = self.bundle.sharing[-1]
+			if sharing:
+				# global convolution
+				return (self.bundle.geo.numKernel() + 1) * self.bundle.mapCount
+			else:
+				# local convolution
+				return (self.bundle.geo.numKernel() + 1) * self.numOutput()
+		else:
+			return 0
+
+	def numComput(self):
+		if type(self.bundle) is FullBundle:
+			ops = self.bundle.input.numOutput() * self.numOutput()
+		elif type(self.bundle) is ConvolveBundle:
+			ops = self.bundle.geo.numKernel() * self.numOutput()
+		else:
+			ops = 0
+		return ops
+
 	def output(self):
-		s = "hidden %s %s %s {\n" % (self.name, self.dimOutput_to_str(), self.outputFunc)
+		s = "hidden %s %s %s {\n" % (self.name, self._dimOutput_to_str(), self.outputFunc)
 		if self.biases is not None:
 			s += "  Biases = %s;\n" % self.params.output(self.biases)
 		s += "%s\n}" % self.bundle.output()
@@ -111,8 +156,30 @@ class OutputLayer(Layer):
 			self.biases = None
 		self.bundle.removeParams()
 
+	def numParam(self):
+		if type(self.bundle) is FullBundle:
+			return self.numOutput() * (self.bundle.input.numOutput() + 1)
+		elif type(self.bundle) is ConvolveBundle:
+			if self.bundle.sharing is None or self.bundle.sharing[-1]:
+				# global convolution
+				return (self.bundle.geo.numKernel() + 1) * self.bundle.mapCount
+			else:
+				# local convolution
+				return (self.bundle.geo.numKernel() + 1) * self.numOutput()
+		else:
+			return 0
+
+	def numComput(self):
+		if type(self.bundle) is FullBundle:
+			ops = self.bundle.input.numOutput() * self.numOutput()
+		elif type(self.bundle) is ConvolveBundle:
+			ops = self.bundle.geo.numKernel() * self.numOutput()
+		else:
+			ops = 0
+		return ops
+
 	def output(self):
-		s = "output %s %s %s {\n" % (self.name, self.dimOutput_to_str(), self.outputFunc)
+		s = "output %s %s %s {\n" % (self.name, self._dimOutput_to_str(), self.outputFunc)
 		if self.biases is not None:
 			s += "  Biases = %s;\n" % self.params.output(self.biases)
 		s += "%s\n}" % self.bundle.output()

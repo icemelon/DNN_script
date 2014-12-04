@@ -23,7 +23,8 @@ if __name__ == '__main__':
 	# argparser.add_argument('-v', '--verify', action='store_true', dest='verify', help='Verify NN definition')
 	argparser.add_argument('-rm', '--remove', type=int, default=0, help='Remove last N layers')
 	argparser.add_argument('-m', '--modify', help='Modification description file')
-	argparser.add_argument('-o', '--output', type=argparse.FileType('w'), default=sys.stdout, help='output file name (.nn)')
+	argparser.add_argument('-o', '--output', type=argparse.FileType('w'), help='output file name (.nn)')
+	argparser.add_argument('--stats', action='store_true')
 	try:
 		args = argparser.parse_args()
 	except:
@@ -73,14 +74,17 @@ if __name__ == '__main__':
 	if args.remove > 0:
 		net.removeLayers(args.remove)
 
-	begin = time.time()
-	log("Starts to output neural network")
-	
-	args.output.write("%s\n" % net.output())
-	net.outputParams(args.output, args.input)
+	if args.output:
+		begin = time.time()
+		log("Starts to output neural network")
+		
+		args.output.write("%s\n" % net.output())
+		net.outputParams(args.output, args.input)
 
-	end = time.time()
-	log("Output finishes (%.1f s)" % (end-begin))
+		end = time.time()
+		log("Output finishes (%.1f s)" % (end-begin))
 
-	args.input.close()
-	args.output.close()
+		args.input.close()
+		args.output.close()
+	elif args.stats:
+		net.stats()

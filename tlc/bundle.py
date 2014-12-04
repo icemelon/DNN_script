@@ -9,6 +9,7 @@ class Bundle(object):
 	def removeParams(self):
 		pass
 
+	# output to string
 	def output(self):
 		pass
 
@@ -23,7 +24,8 @@ class Bundle(object):
 				item = item.strip()
 				if len(item) == 0: continue
 				key, val = item.split('=')
-				attrs[key.strip()] = params.parseParam(val)
+				key = key.strip()
+				attrs[key] = params.parseParam(val)
 
 		if bundleType == "all":
 			bundle = FullBundle(inputLayer, params, attrs)
@@ -131,6 +133,9 @@ class ConvolveGeometry(object):
 		self.dim = len(self.dimKernel)
 		self.stride = attrs['Stride'] if 'Stride' in attrs else None
 		self.padding = attrs['Padding'] if 'Padding' in attrs else None
+
+	def numKernel(self):
+		return reduce(lambda x,y: x*y, self.dimKernel)
 
 	@property
 	def dimOutput(self):
