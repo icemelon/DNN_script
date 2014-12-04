@@ -129,9 +129,9 @@ class HiddenLayer(Layer):
 
 	def numComput(self):
 		if type(self.bundle) is FullBundle:
-			ops = self.bundle.input.numOutput() * self.numOutput()
+			ops = 2 * self.bundle.input.numOutput() * self.numOutput()
 		elif type(self.bundle) is ConvolveBundle:
-			ops = self.bundle.geo.numKernel() * self.numOutput()
+			ops = 2 * self.bundle.geo.numKernel() * self.numOutput()
 		else:
 			ops = 0
 		return ops
@@ -171,9 +171,9 @@ class OutputLayer(Layer):
 
 	def numComput(self):
 		if type(self.bundle) is FullBundle:
-			ops = self.bundle.input.numOutput() * self.numOutput()
+			ops = 2 * self.bundle.input.numOutput() * self.numOutput()
 		elif type(self.bundle) is ConvolveBundle:
-			ops = self.bundle.geo.numKernel() * self.numOutput()
+			ops = 2 * self.bundle.geo.numKernel() * self.numOutput()
 		else:
 			ops = 0
 		return ops

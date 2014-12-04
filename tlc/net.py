@@ -42,10 +42,10 @@ class NeuralNetwork(object):
 			params.append(l.numParam())
 			output.append(l.numOutput())
 
-		print "%s\tTotal" % '\t'.join(name)
-		print "%s\t%s" % ('\t'.join([str(x) for x in comput]), sum(comput))
-		print "%s\t%s" % ('\t'.join([str(x) for x in params]), sum(params))
-		print '\t'.join([str(x) for x in output])
+		print "Layer\tTotal\t%s" % '\t'.join(name)
+		print "Comput(Flops)\t%s\t%s" % (sum(comput), '\t'.join([str(x) for x in comput]))
+		print "#params(floats)\t%s\t%s" % (sum(params), '\t'.join([str(x) for x in params]))
+		print "Output(floats)\t-\t%s" % '\t'.join([str(x) for x in output])
 
 	def verify(self):
 		# first check if there is any dangling constant
