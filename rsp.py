@@ -105,7 +105,7 @@ class RspTemplate(object):
 		s += '}'
 		return s
 
-	def writeToFile(self, filename, lr, nn, rs, binModel, textModel):
+	def writeToFile(self, filename, lr, nn, rs, binModel, textModel, rawoutput):
 		with open(filename, 'w') as f:
 			f.write("/c %s %s\n" % (self.core, self.trainDataset))
 			if self.testDataset is not None:
@@ -121,6 +121,7 @@ class RspTemplate(object):
 			if rs is not None: f.write("/rs %s\n" % rs)
 			f.write("/m %s\n" % binModel)
 			if textModel is not None: f.write("/mt %s\n" % textModel)
+			f.write("/raw %s\n" % rawoutput)
 
 class RspGenerator(object):
 	# rspTmpl could be either RspTemplate obj, or rsp template file
@@ -144,7 +145,8 @@ class RspGenerator(object):
 			task.nn, 
 			task.rs, 
 			task.binModel, 
-			task.textModel)
+			task.textModel,
+			task.rawoutput)
 
 if __name__ == '__main__':
 	import sys

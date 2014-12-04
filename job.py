@@ -32,6 +32,7 @@ class JobManager(object):
 			proc = subprocess.Popen(cmd, cwd=task.rootdir, shell=True, universal_newlines=True)
 			self.running[task] = proc
 			self.log("Task %s is running" % task.taskName)
+			time.sleep(10) # wait for 10sec
 
 	def execute(self, task):
 		if isinstance(task, Task):

@@ -176,12 +176,13 @@ class RegularTrainer(Trainer):
 	def update(self, meanErr, acc, model, fork):
 		reduceLR = False
 		# decide whether to reduce LR
-		if acc < self.lastAccuracy:
+		if acc <= self.lastAccuracy:
 			reduceLR = True
-		elif acc == self.lastAccuracy and meanErr >= self.lastMeanErr:
-			reduceLR = True
+		#elif acc == self.lastAccuracy and meanErr >= self.lastMeanErr:
+		#	reduceLR = True
 		
 		# decide whether to advance to next epoch
+		"""
 		if self.epoch == 0 and acc < THRESHOLD:
 			if fork:
 				# all forks are bad, stop training
@@ -192,33 +193,37 @@ class RegularTrainer(Trainer):
 			# keep stay at epoch 0, increase subId
 			self.subId += 1
 		else:
-			self.epoch += 1
-			self.subId = 0
-			self.nn = model
-			self.lastAccuracy = acc
-			self.lastMeanErr = meanErr
+		"""
+		self.epoch += 1
+		self.subId = 0
+		self.nn = model
+		self.lastAccuracy = acc
+		self.lastMeanErr = meanErr
 
-			if acc > self.bestAccuracy:
-				self.bestAccuracy = acc
-				self.bestMeanErr = meanErr
-				self.bestModel = model
-			elif acc == self.bestAccuracy and self.bestMeanErr > meanErr:
-				self.bestAccuracy = acc
-				self.bestMeanErr = meanErr
-				self.bestModel = model
-			if reduceLR:
-				self.lr *= self.lred
+		if acc > self.bestAccuracy:
+			self.bestAccuracy = acc
+			self.bestMeanErr = meanErr
+			self.bestModel = model
+		elif acc == self.bestAccuracy and self.bestMeanErr > meanErr:
+			self.bestAccuracy = acc
+			self.bestMeanErr = meanErr
+			self.bestModel = model
+		if reduceLR:
+			self.lr *= self.lred
 
 	def train(self):
 		print '\nStart training thread %s' % self.threadName
 
 		while True:
-			if not self.trainOneEpoch():
-				print 'Error in training'
-				return False
 			if self.lr < 1e-4:
 				print 'LR %s is too small. Stop training' % self.lr
 				break
+			if self.lastMeanErr < 0.01:
+				print 'MeanErr %s is too small. Stop training' % self.lastMeanErr
+				break
+			if not self.trainOneEpoch():
+				print 'Error in training'
+				return False
 
 		if self.bestModel is not None:
 			self.logger.log('[FINISH] MeanErr=%s Accuracy=%s Model=%s' % (self.bestMeanErr, self.bestAccuracy, self.bestModel))

@@ -1,5 +1,7 @@
 import os
 
+from config import TMP_DIR
+
 class Task(object):
 	def __init__(self, rspTmpl, rootdir, threadName, epoch, lr, nn, rs, subId):
 		self.rootdir = rootdir
@@ -15,11 +17,12 @@ class Task(object):
 		else:
 			idName = '%s.%s.%s' % (threadName, epoch, subId)
 
-		self.rspFile = '%s.rsp' % idName
+		self.taskName = '%s_%s' % (os.path.basename(rootdir), idName)
+		self.rspFile = os.path.join(TMP_DIR, '%s.rsp' % idName)
+		self.stdout = os.path.join(TMP_DIR, '%s.Result.txt' % idName)
+		self.rawoutput = os.path.join(TMP_DIR, '%s.raw.txt' % idName)
 		self.binModel = os.path.join('model', '%s.Model.bin' % idName)
 		self.textModel = os.path.join('model', '%s.Model.nn' % idName)
-		self.taskName = '%s_%s' % (os.path.basename(rootdir), idName)
-		self.stdout = '%s.Result.txt' % idName
 		#self.stderr = '%s.Error.txt' % idName
 
 		# create rsp File

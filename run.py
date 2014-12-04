@@ -16,11 +16,15 @@ def runLocal(args):
 	print 'TLC path: %s' % args.tlc
 	print 'Socket: %s' % args.socket
 
-	jobManager = JobManager(args.socket, args.tlc)
-	logger = Logger(args.logfile)
-
 	# switch to dataset directory
 	os.chdir(args.dataset)
+	if not os.path.exists(MODEL_DIR):
+		os.mkdir(MODEL_DIR)
+	if not os.path.exists(TMP_DIR):
+		os.mkdir(TMP_DIR)
+	
+	jobManager = JobManager(args.socket, args.tlc)
+	logger = Logger(args.logfile)
 
 	if 'Shared' in logger.headers:
 		trainer = SharedTrainer(logger, args.dataset, jobManager)
