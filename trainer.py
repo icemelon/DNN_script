@@ -445,6 +445,10 @@ class SharedTrainer(Trainer):
 		dataset = self.__dict__["%sDataset" % datasetType]
 		datasetBin = self.__dict__["%sDatasetBin" % datasetType]
 
+		if os.path.exists(datasetBin):
+			print "%s exists" % datasetBin
+			return
+
 		if not os.path.exists(dataset):
 			# pass the bottom model to dataset
 			print "[SHARED] Generating %s tmp dataset" % datasetType

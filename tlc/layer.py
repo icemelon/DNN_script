@@ -120,7 +120,11 @@ class HiddenLayer(Layer):
 				sharing = self.bundle.sharing[-1]
 			if sharing:
 				# global convolution
-				return (self.bundle.geo.numKernel() + 1) * self.bundle.mapCount
+				if type(self.bundle.mapCount) is list:
+					mapCount = self.bundle.mapCount[0]
+				else:
+					mapCount = self.bundle.mapCount
+				return (self.bundle.geo.numKernel() + 1) * mapCount
 			else:
 				# local convolution
 				return (self.bundle.geo.numKernel() + 1) * self.numOutput()
@@ -162,7 +166,11 @@ class OutputLayer(Layer):
 		elif type(self.bundle) is ConvolveBundle:
 			if self.bundle.sharing is None or self.bundle.sharing[-1]:
 				# global convolution
-				return (self.bundle.geo.numKernel() + 1) * self.bundle.mapCount
+				if type(self.bundle.mapCount) is list:
+					mapCount = self.bundle.mapCount[0]
+				else:
+					mapCount = self.bundle.mapCount
+				return (self.bundle.geo.numKernel() + 1) * mapCount
 			else:
 				# local convolution
 				return (self.bundle.geo.numKernel() + 1) * self.numOutput()

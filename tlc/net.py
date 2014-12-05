@@ -41,6 +41,7 @@ class NeuralNetwork(object):
 			comput.append(l.numComput())
 			params.append(l.numParam())
 			output.append(l.numOutput())
+		# print params
 
 		print "Layer\tTotal\t%s" % '\t'.join(name)
 		print "Comput(Flops)\t%s\t%s" % (sum(comput), '\t'.join([str(x) for x in comput]))
