@@ -22,10 +22,13 @@ def convert(tlcNet):
 	if type(inputLayer.dimOutput) is list:
 		caffeNet.input_dim.extend(inputLayer.dimOutput)
 	else:
-		imageSize = int(math.sqrt(inputLayer.dimOutput / 3))
-		caffeNet.input_dim.append(3)
-		caffeNet.input_dim.append(imageSize)
-		caffeNet.input_dim.append(imageSize)
+		bundle = tlcNet.layers[1].bundle
+		if type(bundle) is FullBundle:
+			caffeNet.input_dim.append(1)
+			caffeNet.input_dim.append(1)
+			caffeNet.input_dim.append(inputLayer.dimOutput)
+		else:
+			caffeNet.input_dim.extend(bundle.geo.dimInput)
 
 	# copy basic info from tlc to caffe
 	for i in range(1, len(tlcNet.layers)):
@@ -154,10 +157,8 @@ def convertBlobs(tlcNet, caffeNet):
 				biasBlob.channels = 1
 				biasBlob.height = 1
 				biasBlob.width = numKernel
-
-			print weightBlob
-			print biasBlob
-
+			# print weightBlob
+			# print biasBlob
 			kernelSize = reduce(lambda x,y: x*y, bundle.geo.dimKernel)
 			# print "%s: %s * %s" % (tlcLayer.name, numKernel, kernelSize)
 			index = 0
