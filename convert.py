@@ -60,8 +60,15 @@ def convertLayer(tlcLayer):
 		computLayer.top.append(tlcLayer.name)
 		computLayer.type = FunctionMapping[tlcLayer.outputFunc]
 	elif type(bundle) is ConvolveBundle:
-		caffeLayer.type = LayerParameter.CONVOLUTION
-		conv = caffeLayer.convolution_param
+		if bundle.sharing is not None and not bundle.sharing[-1]:
+			# local convolution
+			caffeLayer.type = LayerParameter.LOCAL
+			conv = caffeLayer.local_param
+		else:
+			# global convolution
+			caffeLayer.type = LayerParameter.CONVOLUTION
+			conv = caffeLayer.convolution_param
+
 		conv.kernel_size = bundle.geo.dimKernel[-1]
 		if bundle.geo.stride is not None:
 			conv.stride = bundle.geo.stride[-1]
@@ -80,6 +87,7 @@ def convertLayer(tlcLayer):
 		computLayer.bottom.append(tlcLayer.name)
 		computLayer.top.append(tlcLayer.name)
 		computLayer.type = FunctionMapping[tlcLayer.outputFunc]
+
 	elif type(bundle) is ResponseNormBundle:
 		caffeLayer.type = LayerParameter.LRN
 		lrn_param = caffeLayer.lrn_param
@@ -108,28 +116,55 @@ def convertBlobs(tlcNet, caffeNet):
 				caffeLayer = l
 		bundle = tlcLayer.bundle
 		if type(bundle) is ConvolveBundle:
+			# source blob
 			weights = params.params[bundle.weights]
+			# target blobs
 			weightBlob = caffeLayer.blobs.add()
-			weightBlob.num = caffeLayer.convolution_param.num_output
-			if len(bundle.geo.dimKernel) == 2:
-				weightBlob.channels = 1
-			else:
-				weightBlob.channels = bundle.geo.dimKernel[0]
-			weightBlob.height = caffeLayer.convolution_param.kernel_size
-			weightBlob.width = caffeLayer.convolution_param.kernel_size
-
 			biasBlob = caffeLayer.blobs.add()
-			biasBlob.num = 1
-			biasBlob.channels = 1
-			biasBlob.height = 1
-			biasBlob.width = weightBlob.num
 
-			kernel_num = weightBlob.channels * weightBlob.height * weightBlob.width
+			if bundle.sharing is not None and not bundle.sharing[-1]:
+				height_out = 1 + (bundle.geo.dimInput[-2] + caffeLayer.local_param.pad * 2 - bundle.geo.dimKernel[-2]) / caffeLayer.local_param.stride
+				width_out = 1 + (bundle.geo.dimInput[-1] + caffeLayer.local_param.pad * 2 - bundle.geo.dimKernel[-1]) / caffeLayer.local_param.stride
+				# local convolution
+				# numKernel equals to output size
+				numKernel = tlcLayer.numOutput()
+				weightBlob.num = caffeLayer.local_param.num_output
+				weightBlob.channels = 1
+				weightBlob.height = reduce(lambda x,y: x*y, bundle.geo.dimKernel)
+				weightBlob.width = height_out * width_out
+
+				biasBlob.num = 1
+				biasBlob.channels = 1
+				biasBlob.height = caffeLayer.local_param.num_output
+				biasBlob.width = weightBlob.width
+
+			else:
+				# global convolution
+				# numKernel equals to num of feature maps
+				numKernel = caffeLayer.convolution_param.num_output 
+				weightBlob.num = numKernel
+				if len(bundle.geo.dimKernel) == 2:
+					weightBlob.channels = 1
+				else:
+					weightBlob.channels = bundle.geo.dimKernel[0]
+				weightBlob.height = caffeLayer.convolution_param.kernel_size
+				weightBlob.width = caffeLayer.convolution_param.kernel_size
+
+				biasBlob.num = 1
+				biasBlob.channels = 1
+				biasBlob.height = 1
+				biasBlob.width = numKernel
+
+			print weightBlob
+			print biasBlob
+
+			kernelSize = reduce(lambda x,y: x*y, bundle.geo.dimKernel)
+			# print "%s: %s * %s" % (tlcLayer.name, numKernel, kernelSize)
 			index = 0
-			for i in range(weightBlob.num):
-				weightBlob.data.extend(weights[index:index+kernel_num])
-				biasBlob.data.append(weights[index+kernel_num])
-				index += kernel_num + 1
+			for i in range(numKernel):
+				weightBlob.data.extend(weights[index:index+kernelSize])
+				biasBlob.data.append(weights[index+kernelSize])
+				index += kernelSize + 1
 
 		elif type(bundle) is FullBundle:
 			weights = params.params[bundle.weights]
