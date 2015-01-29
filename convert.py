@@ -204,8 +204,11 @@ if __name__ == '__main__':
 		f.write(str(caffeNet))
 	print "[%s] Proto file: %s" % (time.asctime(), protofile)
 	
-	binaryfile = "%s.caffemodel" % prefix
-	convertBlobs(tlcNet, caffeNet)
-	with open(binaryfile, 'wb') as f:
-		f.write(caffeNet.SerializeToString())
-	print "[%s] Binary model file: %s" % (time.asctime(), binaryfile)
+	if tlcNet.layers[1].bundle.weights is not None:	
+		binaryfile = "%s.caffemodel" % prefix
+		convertBlobs(tlcNet, caffeNet)
+		with open(binaryfile, 'wb') as f:
+			f.write(caffeNet.SerializeToString())
+		print "[%s] Binary model file: %s" % (time.asctime(), binaryfile)
+
+	print "[%s] Finished" % time.asctime()
