@@ -3,6 +3,8 @@ import sys
 import math
 import time
 
+import numpy as np
+
 from tlc.net import NeuralNetwork
 from tlc.bundle import *
 from caffe.caffe_pb2 import NetParameter, LayerParameter, PoolingParameter
@@ -124,13 +126,17 @@ def convertBlobs(tlcNet, caffeNet):
 			# target blobs
 			weightBlob = caffeLayer.blobs.add()
 			biasBlob = caffeLayer.blobs.add()
-
 			if bundle.sharing is not None and not bundle.sharing[-1]:
+				local = True
+			else:
+				local = False
+			kernelSize = reduce(lambda x,y: x*y, bundle.geo.dimKernel)
+
+			if local:
 				height_out = 1 + (bundle.geo.dimInput[-2] + caffeLayer.local_param.pad * 2 - bundle.geo.dimKernel[-2]) / caffeLayer.local_param.stride
 				width_out = 1 + (bundle.geo.dimInput[-1] + caffeLayer.local_param.pad * 2 - bundle.geo.dimKernel[-1]) / caffeLayer.local_param.stride
 				# local convolution
-				# numKernel equals to output size
-				numKernel = tlcLayer.numOutput()
+				
 				weightBlob.num = caffeLayer.local_param.num_output
 				weightBlob.channels = 1
 				weightBlob.height = reduce(lambda x,y: x*y, bundle.geo.dimKernel)
@@ -140,6 +146,20 @@ def convertBlobs(tlcNet, caffeNet):
 				biasBlob.channels = 1
 				biasBlob.height = caffeLayer.local_param.num_output
 				biasBlob.width = weightBlob.width
+
+				index = 0
+				M_ = caffeLayer.local_param.num_output
+				N_ = height_out * width_out
+				# numKernel = M_ * N_
+				kernels = np.ndarray(shape=(M_, N_, kernelSize), dtype=float)
+				for i in range(M_):
+					for j in range(N_):
+						kernels[i][j] = weights[index:index+kernelSize]
+						biasBlob.data.append(weights[index+kernelSize])
+						index += kernelSize + 1
+
+				for i in range(M_):
+					weightBlob.data.extend(kernels[i].T.flatten().tolist())
 
 			else:
 				# global convolution
@@ -157,15 +177,17 @@ def convertBlobs(tlcNet, caffeNet):
 				biasBlob.channels = 1
 				biasBlob.height = 1
 				biasBlob.width = numKernel
+
+				# start copy the parameters
+				index = 0
+				for i in range(numKernel):
+					weightBlob.data.extend(weights[index:index+kernelSize])
+					biasBlob.data.append(weights[index+kernelSize])
+					index += kernelSize + 1
 			# print weightBlob
 			# print biasBlob
-			kernelSize = reduce(lambda x,y: x*y, bundle.geo.dimKernel)
+			
 			# print "%s: %s * %s" % (tlcLayer.name, numKernel, kernelSize)
-			index = 0
-			for i in range(numKernel):
-				weightBlob.data.extend(weights[index:index+kernelSize])
-				biasBlob.data.append(weights[index+kernelSize])
-				index += kernelSize + 1
 
 		elif type(bundle) is FullBundle:
 			weights = params.params[bundle.weights]
